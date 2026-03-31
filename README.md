@@ -2,6 +2,8 @@
 
 🌍 An LLM-Powered Scalable Platform for Digital Human Society Evolution Simulation
 
+> **Note:** This project is currently in early development for proof-of-concept purposes. Please do not use it in production.
+
 
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 

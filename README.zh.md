@@ -2,6 +2,8 @@
 
 🌍 大模型驱动的数字人类社会演化可扩展平台
 
+> **注意：** 该项目目前处于想法验证的早期开发阶段，请勿在生产环境中使用。
+
 
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
