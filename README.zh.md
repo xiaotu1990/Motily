@@ -111,7 +111,7 @@ Motily 是一个基于 **JBoot 3.x + MySQL 8.0** 构建的企业级轻量级开�
 | 核心框架    | JBoot 3.12.0 (内置 Undertow + MyBatisPlus)      |
 | 数据存储    | MySQL 8.0 + JBoot Cache (Caffeine)            |
 | 大模型集成   | JBoot Http + 本地 LLM (Qwen3.5-0.8B) / 商用 API |
-| 开发语言    | Java 17+                                      |
+| 开发语言    | Java 23                                      |
 | 构建工具    | Maven                                         |
 | 可视化（可选） | Vue3 + Element-Plus / JBoot + Freemarker      |
 | 适配系统    | Windows/macOS/Linux                           |
@@ -126,7 +126,7 @@ Motily 是一个基于 **JBoot 3.x + MySQL 8.0** 构建的企业级轻量级开�
 
 
 
-* JDK 17+
+* JDK 23
 
 * MySQL 8.0
 

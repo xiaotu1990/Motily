@@ -111,7 +111,7 @@ Its core innovation integrates four key capabilities: *digital DNS genetic codin
 | Core Framework | JBoot 3.12.0 (built-in Undertow + MyBatisPlus) |
 | Data Storage | MySQL 8.0 + JBoot Cache (Caffeine) |
 | LLM Integration | JBoot Http + Local LLM (Qwen3.5-0.8B) / Commercial API |
-| Development Language | Java 17+ |
+| Development Language | Java 23 |
 | Build Tool | Maven |
 | Visualization (Optional) | Vue3 + Element-Plus / JBoot + Freemarker |
 | Compatible Systems | Windows/macOS/Linux |
@@ -126,7 +126,7 @@ Its core innovation integrates four key capabilities: *digital DNS genetic codin
 
 
 
-* JDK 17+
+* JDK 23
 
 * MySQL 8.0
 

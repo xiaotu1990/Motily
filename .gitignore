@@ -25,3 +25,9 @@ replay_pid*
 
 # Trae IDE files
 .trae/
+
+# IntelliJ IDEA files
+.idea/
+*.iml
+*.ipr
+*.iws
