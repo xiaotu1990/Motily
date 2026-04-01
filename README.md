@@ -9,7 +9,7 @@
 
 
 
-![Tech Stack](https://img.shields.io/badge/Stack-JBoot%20%2B%20MySQL%20%2B%20LLM-green.svg)
+![Tech Stack](https://img.shields.io/badge/Stack-Quarkus%20%2B%20MySQL%20%2B%20LLM-green.svg)
 
 
 
@@ -28,7 +28,7 @@
 
 ## Project Introduction
 
-Motily is an enterprise-grade lightweight open-source framework built on **JBoot 3.x + MySQL 8.0**, focusing on **scalable simulation of digital humans' full-life-cycle social evolution**.
+Motily is an enterprise-grade lightweight open-source framework built on **Quarkus 3.x + MySQL 8.0**, focusing on **scalable simulation of digital humans' full-life-cycle social evolution**.
 
 Its core innovation integrates four key capabilities: *digital DNS genetic coding*, *intergenerational social inheritance*, *LLM-powered life trajectory modeling*, and *timeline-driven simulation*. It supports digital humans' autonomous growth from childhood to old age, family lineage continuity, social class mobility, and rule emergence, providing a high-performance, extensible open-source solution for social science research, multi-agent AI systems, and digital twin development.
 
@@ -108,12 +108,12 @@ Its core innovation integrates four key capabilities: *digital DNS genetic codin
 
 | Category | Technology Selection |
 | ------- | ------------------ |
-| Core Framework | JBoot 3.12.0 (built-in Undertow + MyBatisPlus) |
-| Data Storage | MySQL 8.0 + JBoot Cache (Caffeine) |
-| LLM Integration | JBoot Http + Local LLM (Qwen3.5-0.8B) / Commercial API |
+| Core Framework | Quarkus 3.13+ (built-in Undertow + Hibernate ORM) |
+| Data Storage | MySQL 8.0 + Quarkus Cache (Caffeine) |
+| LLM Integration | Quarkus HTTP Client + Local LLM (Qwen3.5-0.8B) / Commercial API |
 | Development Language | Java 23 |
-| Build Tool | Maven |
-| Visualization (Optional) | Vue3 + Element-Plus / JBoot + Freemarker |
+| Build Tool | Maven/Gradle |
+| Visualization (Optional) | Vue3 + Element-Plus / Quarkus + Qute |
 | Compatible Systems | Windows/macOS/Linux |
 
 

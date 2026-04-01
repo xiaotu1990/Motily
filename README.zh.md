@@ -9,7 +9,7 @@
 
 
 
-![Tech Stack](https://img.shields.io/badge/Stack-JBoot%20%2B%20MySQL%20%2B%20LLM-green.svg)
+![Tech Stack](https://img.shields.io/badge/Stack-Quarkus%20%2B%20MySQL%20%2B%20LLM-green.svg)
 
 
 
@@ -28,7 +28,7 @@
 
 ## 项目介绍
 
-Motily 是一个基于 **JBoot 3.x + MySQL 8.0** 构建的企业级轻量级开源框架，专注于 **数字人类全生命周期社会演化的可扩展模拟**。
+Motily 是一个基于 **Quarkus 3.x + MySQL 8.0** 构建的企业级轻量级开源框架，专注于 **数字人类全生命周期社会演化的可扩展模拟**。
 
 其核心创新集成了四大关键能力：*数字 DNS 遗传编码*、*代际社会传承*、*大模型轨迹驱动*和*时间轴可控模拟*。支持数字人类从童年到老年的自主成长、家族谱系延续、社会阶层流动和规则涌现，为社会科学研究、多智能体 AI 系统和数字孪生开发提供高性能、可扩展的开源解决方案。
 
@@ -108,12 +108,12 @@ Motily 是一个基于 **JBoot 3.x + MySQL 8.0** 构建的企业级轻量级开�
 
 | 类别      | 技术选型                                          |
 | ------- | --------------------------------------------- |
-| 核心框架    | JBoot 3.12.0 (内置 Undertow + MyBatisPlus)      |
-| 数据存储    | MySQL 8.0 + JBoot Cache (Caffeine)            |
-| 大模型集成   | JBoot Http + 本地 LLM (Qwen3.5-0.8B) / 商用 API |
+| 核心框架    | Quarkus 3.13+ (内置 Undertow + Hibernate ORM)      |
+| 数据存储    | MySQL 8.0 + Quarkus Cache (Caffeine)            |
+| 大模型集成   | Quarkus HTTP Client + 本地 LLM (Qwen3.5-0.8B) / 商用 API |
 | 开发语言    | Java 23                                      |
-| 构建工具    | Maven                                         |
-| 可视化（可选） | Vue3 + Element-Plus / JBoot + Freemarker      |
+| 构建工具    | Maven/Gradle                                         |
+| 可视化（可选） | Vue3 + Element-Plus / Quarkus + Qute      |
 | 适配系统    | Windows/macOS/Linux                           |
 
 
