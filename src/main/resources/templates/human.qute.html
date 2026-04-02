@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>数字人管理</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header"><h1>数字人管理</h1></div>
+            <div class="main">
+                <button class="button" @click="generateHumans">生成数字人</button>
+                <div v-if="loading" class="message message-info">加载中... <span class="loading"></span></div>
+                <div v-if="error" class="message message-error">{{ error }}</div>
+                <table class="table" v-if="humans.length > 0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>性别</th>
+                            <th>出生年份</th>
+                            <th>财富</th>
+                            <th>社会阶层</th>
+                            <th>职业</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="human in humans" :key="human.id">
+                            <td>{{ human.id }}</td>
+                            <td>{{ human.name }}</td>
+                            <td>{{ human.gender == 0 ? '女' : '男' }}</td>
+                            <td>{{ human.birthYear }}</td>
+                            <td>{{ human.wealth }}</td>
+                            <td>{{ human.socialClass }}</td>
+                            <td>{{ human.occupation }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-else class="empty-state"><p>暂无数字人数据</p></div>
+            </div>
+            <div class="footer">© 2026 Motily</div>
+        </div>
+    </div>
+    <script src="/webjars/vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    humans: [],
+                    loading: false,
+                    error: null
+                };
+            },
+            mounted() {
+                this.loadHumans();
+            },
+            methods: {
+                loadHumans() {
+                    this.loading = true;
+                    this.error = null;
+                    fetch('/api/human/list?page=0&size=100')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.humans = data.data.list;
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            this.error = '加载失败，请重试';
+                            this.loading = false;
+                        });
+                },
+                generateHumans() {
+                    this.loading = true;
+                    this.error = null;
+                    fetch('/api/human/generate?count=10', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert('生成成功');
+                            this.loadHumans();
+                        })
+                        .catch(error => {
+                            this.error = '生成失败，请重试';
+                            this.loading = false;
+                        });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

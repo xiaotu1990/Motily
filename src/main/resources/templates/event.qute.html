@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>社会事件</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header"><h1>社会事件</h1></div>
+            <div class="main">
+                <div v-if="loading" class="message message-info">加载中... <span class="loading"></span></div>
+                <div v-if="error" class="message message-error">{{ error }}</div>
+                <table class="table" v-if="events.length > 0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>事件类型</th>
+                            <th>影响程度</th>
+                            <th>影响范围</th>
+                            <th>年份</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="event in events" :key="event.id">
+                            <td>{{ event.id }}</td>
+                            <td>{{ event.type }}</td>
+                            <td>{{ event.impactLevel }}</td>
+                            <td>{{ event.impactScope }}</td>
+                            <td>{{ event.year }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-else class="empty-state"><p>暂无社会事件数据</p></div>
+            </div>
+            <div class="footer">© 2026 Motily</div>
+        </div>
+    </div>
+    <script src="/webjars/vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    events: [],
+                    loading: false,
+                    error: null
+                };
+            },
+            mounted() {
+                this.loadEvents();
+            },
+            methods: {
+                loadEvents() {
+                    this.loading = true;
+                    this.error = null;
+                    // 调用社会事件列表接口
+                    fetch('/api/event/list')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.events = data.data || [];
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            console.error('加载社会事件数据失败', error);
+                            // 加载失败时使用模拟数据
+                            this.events = [
+                                { id: 1, type: '经济危机', impactLevel: '高', impactScope: '全球', year: 2008 },
+                                { id: 2, type: '技术革命', impactLevel: '中', impactScope: '区域', year: 2015 },
+                                { id: 3, type: '自然灾害', impactLevel: '高', impactScope: '局部', year: 2020 }
+                            ];
+                            this.error = '加载真实数据失败，显示模拟数据';
+                            this.loading = false;
+                        });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

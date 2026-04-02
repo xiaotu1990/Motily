@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Motily</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header"><h1>Motily - 数字人类社会演化模拟</h1></div>
+            <div class="main">
+                <div class="nav-buttons">
+                    <button class="button" @click="navigateTo('human')">数字人管理</button>
+                    <button class="button" @click="navigateTo('simulation')">社会模拟</button>
+                    <button class="button" @click="navigateTo('indicator')">社会指标</button>
+                    <button class="button" @click="navigateTo('family')">家族管理</button>
+                    <button class="button" @click="navigateTo('event')">社会事件</button>
+                </div>
+            </div>
+            <div class="footer">© 2026 Motily</div>
+        </div>
+    </div>
+    <script src="/webjars/vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            methods: {
+                navigateTo(page) {
+                    window.location.href = '/' + page;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

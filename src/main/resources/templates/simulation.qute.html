@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>社会模拟</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header"><h1>社会模拟</h1></div>
+            <div class="main">
+                <div class="form-group">
+                    <label>模拟年限:</label>
+                    <input type="number" v-model="form.years" placeholder="请输入模拟年限" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <button class="button" @click="startSimulation" :disabled="simulationId && status === 1">开始模拟</button>
+                    <button class="button" @click="pauseSimulation" :disabled="!simulationId || status !== 1">暂停</button>
+                    <button class="button" @click="resumeSimulation" :disabled="!simulationId || status !== 0">恢复</button>
+                    <button class="button" @click="stopSimulation" :disabled="!simulationId">停止</button>
+                </div>
+                <div v-if="loading" class="message message-info">处理中... <span class="loading"></span></div>
+                <div v-if="error" class="message message-error">{{ error }}</div>
+                <div class="card" v-if="simulationId">
+                    <div class="card-header">模拟状态</div>
+                    <div class="descriptions">
+                        <div class="descriptions-item"><label>模拟ID:</label>{{ simulationId }}</div>
+                        <div class="descriptions-item"><label>当前年份:</label>{{ currentYear }}</div>
+                        <div class="descriptions-item"><label>状态:</label><span :class="'status-indicator status-' + (status === 1 ? 'running' : status === 0 ? 'paused' : 'completed')"></span>{{ statusText }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">© 2026 Motily</div>
+        </div>
+    </div>
+    <script src="/webjars/vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    form: {
+                        years: 10
+                    },
+                    simulationId: null,
+                    currentYear: 2000,
+                    status: 0,
+                    loading: false,
+                    error: null
+                };
+            },
+            computed: {
+                statusText() {
+                    switch (this.status) {
+                        case 0: return '暂停';
+                        case 1: return '运行';
+                        case 2: return '完成';
+                        default: return '未知';
+                    }
+                }
+            },
+            methods: {
+                startSimulation() {
+                    if (this.form.years < 1) {
+                        this.error = '模拟年限必须大于0';
+                        return;
+                    }
+                    this.loading = true;
+                    this.error = null;
+                    fetch('/api/simulation/start?years=' + this.form.years, { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            this.simulationId = data.data.simulationId;
+                            alert('模拟开始');
+                            this.loadStatus();
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            this.error = '开始模拟失败，请重试';
+                            this.loading = false;
+                        });
+                },
+                pauseSimulation() {
+                    if (this.simulationId) {
+                        this.loading = true;
+                        this.error = null;
+                        fetch('/api/simulation/pause?simulationId=' + this.simulationId, { method: 'POST' })
+                            .then(response => response.json())
+                            .then(data => {
+                                alert('模拟暂停');
+                                this.loadStatus();
+                                this.loading = false;
+                            })
+                            .catch(error => {
+                                this.error = '暂停失败，请重试';
+                                this.loading = false;
+                            });
+                    }
+                },
+                resumeSimulation() {
+                    if (this.simulationId) {
+                        this.loading = true;
+                        this.error = null;
+                        fetch('/api/simulation/resume?simulationId=' + this.simulationId, { method: 'POST' })
+                            .then(response => response.json())
+                            .then(data => {
+                                alert('模拟恢复');
+                                this.loadStatus();
+                                this.loading = false;
+                            })
+                            .catch(error => {
+                                this.error = '恢复失败，请重试';
+                                this.loading = false;
+                            });
+                    }
+                },
+                stopSimulation() {
+                    if (this.simulationId) {
+                        this.loading = true;
+                        this.error = null;
+                        fetch('/api/simulation/stop?simulationId=' + this.simulationId, { method: 'POST' })
+                            .then(response => response.json())
+                            .then(data => {
+                                alert('模拟停止');
+                                this.loadStatus();
+                                this.loading = false;
+                            })
+                            .catch(error => {
+                                this.error = '停止失败，请重试';
+                                this.loading = false;
+                            });
+                    }
+                },
+                loadStatus() {
+                    if (this.simulationId) {
+                        fetch('/api/simulation/status?simulationId=' + this.simulationId)
+                            .then(response => response.json())
+                            .then(data => {
+                                this.currentYear = data.data.currentYear;
+                                this.status = data.data.status;
+                            })
+                            .catch(error => {
+                                console.error('加载状态失败', error);
+                            });
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

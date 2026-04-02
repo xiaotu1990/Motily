@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>社会指标</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header"><h1>社会指标</h1></div>
+            <div class="main">
+                <div class="form-group">
+                    <label>年份:</label>
+                    <input type="number" v-model="form.year" placeholder="请输入年份" min="2000" max="2100">
+                </div>
+                <div class="form-group">
+                    <button class="button" @click="loadIndicator">查询</button>
+                </div>
+                <div v-if="loading" class="message message-info">加载中... <span class="loading"></span></div>
+                <div v-if="error" class="message message-error">{{ error }}</div>
+                <div class="card" v-if="indicator">
+                    <div class="card-header">{{ form.year }}年社会指标</div>
+                    <div class="descriptions">
+                        <div class="descriptions-item"><label>阶层分布:</label>{{ indicator.classDistribution }}</div>
+                        <div class="descriptions-item"><label>职业结构:</label>{{ indicator.occupationStructure }}</div>
+                        <div class="descriptions-item"><label>财富分布:</label>{{ indicator.wealthDistribution }}</div>
+                    </div>
+                </div>
+                <div v-if="!loading && !error && !indicator" class="empty-state"><p>请输入年份并点击查询</p></div>
+            </div>
+            <div class="footer">© 2026 Motily</div>
+        </div>
+    </div>
+    <script src="/webjars/vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    form: {
+                        year: 2000
+                    },
+                    indicator: null,
+                    loading: false,
+                    error: null
+                };
+            },
+            methods: {
+                loadIndicator() {
+                    if (this.form.year < 2000 || this.form.year > 2100) {
+                        this.error = '年份必须在2000-2100之间';
+                        return;
+                    }
+                    this.loading = true;
+                    this.error = null;
+                    fetch('/api/indicator/year?year=' + this.form.year)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.indicator = data.data;
+                            this.loading = false;
+                        })
+                        .catch(error => {
+                            this.error = '查询失败，请重试';
+                            this.loading = false;
+                        });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
