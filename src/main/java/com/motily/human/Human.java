@@ -27,12 +27,12 @@ public class Human extends PanacheEntity {
     @Column(name = "death_year") 
     public Integer deathYear;
     
-    @ManyToOne(fetch = FetchType.LAZY) 
-    @JoinColumn(name = "father_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "father_id", nullable = true, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
     public Human father;
     
-    @ManyToOne(fetch = FetchType.LAZY) 
-    @JoinColumn(name = "mother_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mother_id", nullable = true, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
     public Human mother;
     
     @Column(name = "wealth", nullable = false) 

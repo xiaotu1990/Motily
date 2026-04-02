@@ -16,8 +16,8 @@ public class Family extends PanacheEntity {
     @Column(name = "name", nullable = false, length = 50) 
     public String name;
     
-    @ManyToOne(fetch = FetchType.LAZY) 
-    @JoinColumn(name = "founder_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "founder_id", nullable = true, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
     public Human founder;
     
     @Column(name = "total_wealth", nullable = false) 
