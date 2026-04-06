@@ -96,7 +96,6 @@ public class PopulationInitializer {
             human.maritalStatus = "married";
         }
 
-        human.persist();
         return human;
     }
 

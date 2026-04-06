@@ -3,6 +3,7 @@ package com.motily.api;
 import com.motily.human.Human;
 import com.motily.human.HumanService;
 import com.motily.human.PopulationInitializer;
+import com.motily.human.AsyncBatchService;
 import com.motily.society.Marriage;
 import com.motily.society.SocialEvent;
 import com.motily.society.SocialIndicator;
@@ -27,6 +28,9 @@ import java.util.Random;
 public class ApiResource {
     @Inject
     HumanService humanService;
+
+    @Inject
+    AsyncBatchService asyncBatchService;
 
     @Inject
     PopulationInitializer populationInitializer;
@@ -559,35 +563,26 @@ public class ApiResource {
     @Path("/human/batch-create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Transactional
     public Response batchCreateHumans(BatchCreateRequest request) {
         int count = request.count > 0 ? request.count : 1000;
         if (count > 50000) {
             count = 50000;
         }
-        int currentYear = java.time.LocalDate.now().getYear();
-        Random rng = new Random();
-        int chunkSize = 2000;
+
         int totalCreated = 0;
+        int transactionSize = 5000; // 每个事务处理5000个
 
-        for (int i = 0; i < count; i += chunkSize) {
-            int batchSize = Math.min(chunkSize, count - i);
-            List<Human> batch = populationInitializer.initializePopulation(batchSize, currentYear, rng);
-            totalCreated += batch.size();
+        System.out.println("开始批量创建: " + count + " 人");
 
-            if ((i / chunkSize + 1) % 3 == 0 || i + chunkSize >= count) {
-                try {
-                    var em = Human.getEntityManager();
-                    if (em != null) {
-                        em.flush();
-                        em.clear();
-                    }
-                } catch (Exception e) {
-                }
-            }
+        for (int i = 0; i < count; i += transactionSize) {
+            int batchSize = Math.min(transactionSize, count - i);
+            System.out.println("处理事务: " + (i/transactionSize + 1) + ", 大小: " + batchSize);
+            totalCreated += createBatchInTransaction(batchSize);
+            System.out.println("事务完成，累计创建: " + totalCreated + " 人");
         }
 
         long totalPopulation = humanService.countHumans();
+        System.out.println("批量创建完成: " + totalCreated + " 人, 总人口: " + totalPopulation);
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("created", totalCreated);
@@ -598,6 +593,39 @@ public class ApiResource {
         response.put("data", data);
 
         return Response.ok(response).build();
+    }
+
+    @Transactional
+    public int createBatchInTransaction(int count) {
+        int currentYear = java.time.LocalDate.now().getYear();
+        Random rng = new Random();
+        int chunkSize = 2000;
+        int totalCreated = 0;
+        var em = Human.getEntityManager();
+
+        for (int i = 0; i < count; i += chunkSize) {
+            int batchSize = Math.min(chunkSize, count - i);
+            for (int j = 0; j < batchSize; j++) {
+                Human human = populationInitializer.generateSingleHuman(currentYear, rng);
+                em.persist(human);
+                totalCreated++;
+            }
+            em.flush();
+            em.clear();
+        }
+
+        return totalCreated;
+    }
+
+    @GET
+    @Path("/human/batch-status/{taskId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getBatchStatus(@PathParam("taskId") String taskId) {
+        AsyncBatchService.BatchTask task = asyncBatchService.getTaskStatus(taskId);
+        if (task == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity(java.util.Map.of("code", 404, "message", "任务不存在")).build();
+        }
+        return Response.ok(java.util.Map.of("code", 200, "data", task.toMap())).build();
     }
 
     @GET
