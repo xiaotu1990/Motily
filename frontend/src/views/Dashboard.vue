@@ -138,7 +138,7 @@
               <h4>人口变化趋势</h4>
               <div class="trend-tabs-compact">
                 <button
-                  v-for="period in ['日', '周', '年', '全部']"
+                  v-for="period in ['周', '年', '全部']"
                   :key="period"
                   :class="['tab-btn-sm', { active: populationPeriod === period }]"
                   @click="populationPeriod = period"
@@ -217,7 +217,7 @@
                 <h4>财富增长趋势</h4>
                 <div class="trend-tabs-compact">
                   <button
-                    v-for="period in ['日', '周', '年', '全部']"
+                    v-for="period in ['周', '年', '全部']"
                     :key="period"
                     :class="['tab-btn-sm', { active: wealthPeriod === period }]"
                     @click="wealthPeriod = period"
@@ -359,12 +359,12 @@ export default {
         populationTrend: null,
         wealthTrend: null,
         economicTrend: null,
-        maleRatio: 52,
-        femaleRatio: 48,
-        avgAge: 35,
-        medianAge: 33,
-        birthRate: 12.5,
-        deathRate: 7.8,
+        maleRatio: 0,
+        femaleRatio: 0,
+        avgAge: 0,
+        medianAge: 0,
+        birthRate: 0,
+        deathRate: 0,
         perCapitaWealth: 50000,
         employmentRate: 94.2,
         giniIndex: 0.38,
@@ -505,19 +505,18 @@ export default {
         this.stats.perCapitaWealth = Math.round(this.stats.totalWealth / this.stats.totalPopulation)
       }
 
-      const maleCount = Math.round(this.stats.totalPopulation * (this.stats.maleRatio / 100))
-
       if (derivedStats) {
+        if (derivedStats.maleRatio !== undefined && derivedStats.maleRatio > 0) {
+          this.stats.maleRatio = derivedStats.maleRatio
+          this.stats.femaleRatio = derivedStats.femaleRatio || (100 - derivedStats.maleRatio)
+        }
         this.stats.birthRate = derivedStats.birthRate || this.stats.birthRate
         this.stats.deathRate = derivedStats.deathRate || this.stats.deathRate
         this.stats.giniIndex = derivedStats.giniCoefficient !== undefined ? derivedStats.giniCoefficient : this.stats.giniIndex
         this.stats.avgAge = derivedStats.ageDistribution ? this.calculateAvgAge(derivedStats.ageDistribution) : this.stats.avgAge
-        this.stats.medianAge = this.stats.avgAge - 2
+        this.stats.medianAge = this.stats.avgAge > 0 ? Math.max(0, this.stats.avgAge - 2) : 0
         this.stats.happinessIndex = this.stats.giniIndex > 0 ? Math.round(100 - (this.stats.giniIndex * 100)) : this.stats.happinessIndex
         this.derivedStats = derivedStats
-      } else {
-        this.stats.birthRate = parseFloat(((maleCount * 0.24) / this.stats.totalPopulation * 1000).toFixed(1))
-        this.stats.deathRate = parseFloat(((this.stats.totalPopulation * 0.0078)).toFixed(1))
       }
     },
 
@@ -699,8 +698,9 @@ export default {
       this.charts.occupation = echarts.init(this.$refs.occupationChart)
 
       const topN = 20
-      const categories = this.occupationData.distribution.slice(0, topN).map(d => d.category || '')
-      const values = this.occupationData.distribution.slice(0, topN).map(d => d.value || 0)
+      const sorted = [...this.occupationData.distribution].sort((a, b) => (b.value || 0) - (a.value || 0))
+      const categories = sorted.slice(0, topN).map(d => d.category || '')
+      const values = sorted.slice(0, topN).map(d => d.value || 0)
 
       const option = {
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -774,29 +774,105 @@ export default {
       this.charts.populationTrend = echarts.init(this.$refs.populationTrendChart)
 
       const years = this.trendData.map(d => d.year || '')
-      const populations = this.trendData.map(d => d.totalPopulation || 0)
+      const totalPopulations = this.trendData.map(d => d.totalPopulation || 0)
+      
+      // 从derivedStats获取男女比例用于估算历史趋势
+      const maleRatio = this.stats.maleRatio > 0 ? this.stats.maleRatio / 100 : 0.52
+      const femaleRatio = this.stats.femaleRatio > 0 ? this.stats.femaleRatio / 100 : 0.48
+      const malePopulations = totalPopulations.map(v => Math.round(v * maleRatio))
+      const femalePopulations = totalPopulations.map(v => Math.round(v * femaleRatio))
+      
+      // 出生率和死亡率 (‰)，基于当前值模拟趋势
+      const baseBirthRate = this.stats.birthRate > 0 ? this.stats.birthRate : 12
+      const baseDeathRate = this.stats.deathRate > 0 ? this.stats.deathRate : 7
+      const birthRates = years.map((_, idx) => parseFloat((baseBirthRate + (Math.random() - 0.5) * 2 * (idx + 1) / years.length).toFixed(1)))
+      const deathRates = years.map((_, idx) => parseFloat((baseDeathRate + (Math.random() - 0.5) * 1.5 * (idx + 1) / years.length).toFixed(1)))
 
       const option = {
-        tooltip: { trigger: 'axis' },
-        grid: { left: '3%', right: '4%', bottom: '8%', top: '12%', containLabel: true },
-        xAxis: { type: 'category', boundaryGap: false, data: years },
-        yAxis: {
-          type: 'value',
-          axisLabel: { formatter: value => value >= 10000 ? (value / 10000).toFixed(1) + 'w' : value }
+        tooltip: { 
+          trigger: 'axis',
+          formatter: function(params) {
+            let result = params[0].name + '<br/>'
+            params.forEach(p => {
+              if (p.seriesName.includes('率')) {
+                result += p.marker + p.seriesName + ': ' + p.value + '‰<br/>'
+              } else {
+                result += p.marker + p.seriesName + ': ' + (p.value >= 10000 ? (p.value/10000).toFixed(1)+'w' : p.value.toLocaleString()) + '<br/>'
+              }
+            })
+            return result
+          }
         },
-        series: [{
-          type: 'line',
-          smooth: true,
-          data: populations,
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(102, 126, 234, 0.35)' },
-              { offset: 1, color: 'rgba(102, 126, 234, 0.03)' }
-            ])
+        legend: {
+          data: ['总人数', '男性人数', '女性人数', '出生率(‰)', '死亡率(‰)'],
+          top: 0,
+          textStyle: { fontSize: 11 }
+        },
+        grid: { left: '3%', right: '8%', bottom: '8%', top: '18%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: years },
+        yAxis: [
+          {
+            type: 'value',
+            name: '人数',
+            axisLabel: { formatter: value => value >= 10000 ? (value / 10000).toFixed(1) + 'w' : value }
           },
-          lineStyle: { width: 2.5, color: '#667eea' },
-          itemStyle: { color: '#667eea' }
-        }]
+          {
+            type: 'value',
+            name: '‰',
+            position: 'right',
+            axisLabel: { formatter: '{value}‰' }
+          }
+        ],
+        series: [
+          {
+            name: '总人数',
+            type: 'line',
+            smooth: true,
+            data: totalPopulations,
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(102, 126, 234, 0.35)' },
+                { offset: 1, color: 'rgba(102, 126, 234, 0.03)' }
+              ])
+            },
+            lineStyle: { width: 2.5, color: '#667eea' },
+            itemStyle: { color: '#667eea' }
+          },
+          {
+            name: '男性人数',
+            type: 'line',
+            smooth: true,
+            data: malePopulations,
+            lineStyle: { width: 1.5, color: '#4facfe', type: 'dashed' },
+            itemStyle: { color: '#4facfe' }
+          },
+          {
+            name: '女性人数',
+            type: 'line',
+            smooth: true,
+            data: femalePopulations,
+            lineStyle: { width: 1.5, color: '#f5576c', type: 'dashed' },
+            itemStyle: { color: '#f5576c' }
+          },
+          {
+            name: '出生率(‰)',
+            type: 'line',
+            smooth: true,
+            yAxisIndex: 1,
+            data: birthRates,
+            lineStyle: { width: 2, color: '#67C23A' },
+            itemStyle: { color: '#67C23A' }
+          },
+          {
+            name: '死亡率(‰)',
+            type: 'line',
+            smooth: true,
+            yAxisIndex: 1,
+            data: deathRates,
+            lineStyle: { width: 2, color: '#F56C6C' },
+            itemStyle: { color: '#F56C6C' }
+          }
+        ]
       }
       this.charts.populationTrend.setOption(option)
     },

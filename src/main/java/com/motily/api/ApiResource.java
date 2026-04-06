@@ -301,20 +301,17 @@ public class ApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getHumanStats() {
         long totalPopulation = humanService.countHumans();
-        double totalWealth = 0;
-        List<Human> humans = humanService.listHumans(0, 10000);
-        for (Human human : humans) {
-            totalWealth += human.wealth;
-        }
-        
+        Number totalWealthResult = Human.getEntityManager().createQuery("SELECT SUM(h.wealth) FROM Human h", Number.class).getSingleResult();
+        double totalWealth = totalWealthResult != null ? totalWealthResult.doubleValue() : 0.0;
+
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("totalPopulation", totalPopulation);
         data.put("totalWealth", totalWealth);
-        
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
         response.put("data", data);
-        
+
         return Response.ok(response).build();
     }
     
@@ -323,13 +320,13 @@ public class ApiResource {
     @Path("/human/distribution/social-class")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSocialClassDistribution() {
-        List<Human> humans = humanService.listHumans(0, 10000);
-        
+        List<Human> humans = Human.findAll().list();
+
         java.util.Map<String, Integer> classCount = new java.util.HashMap<>();
         classCount.put("底层", 0);
         classCount.put("中层", 0);
         classCount.put("上层", 0);
-        
+
         for (Human human : humans) {
             String className;
             switch (human.socialClass) {
@@ -340,10 +337,10 @@ public class ApiResource {
             }
             classCount.put(className, classCount.get(className) + 1);
         }
-        
+
         long total = humans.size();
         java.util.List<java.util.Map<String, Object>> distribution = new java.util.ArrayList<>();
-        
+
         for (java.util.Map.Entry<String, Integer> entry : classCount.entrySet()) {
             java.util.Map<String, Object> item = new java.util.HashMap<>();
             item.put("category", entry.getKey());
@@ -351,15 +348,15 @@ public class ApiResource {
             item.put("percentage", total > 0 ? Math.round((entry.getValue() * 100.0 / total) * 10.0) / 10.0 : 0.0);
             distribution.add(item);
         }
-        
+
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("distribution", distribution);
         data.put("total", total);
-        
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
         response.put("data", data);
-        
+
         return Response.ok(response).build();
     }
     
@@ -368,18 +365,18 @@ public class ApiResource {
     @Path("/human/distribution/occupation")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getOccupationDistribution() {
-        List<Human> humans = humanService.listHumans(0, 10000);
-        
+        List<Human> humans = Human.findAll().list();
+
         java.util.Map<String, Integer> occupationCount = new java.util.HashMap<>();
-        
+
         for (Human human : humans) {
             String occupation = human.occupation != null && !human.occupation.isEmpty() ? human.occupation : "无业";
             occupationCount.put(occupation, occupationCount.getOrDefault(occupation, 0) + 1);
         }
-        
+
         long total = humans.size();
         java.util.List<java.util.Map<String, Object>> distribution = new java.util.ArrayList<>();
-        
+
         for (java.util.Map.Entry<String, Integer> entry : occupationCount.entrySet()) {
             java.util.Map<String, Object> item = new java.util.HashMap<>();
             item.put("category", entry.getKey());
@@ -387,15 +384,15 @@ public class ApiResource {
             item.put("percentage", total > 0 ? Math.round((entry.getValue() * 100.0 / total) * 10.0) / 10.0 : 0.0);
             distribution.add(item);
         }
-        
+
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("distribution", distribution);
         data.put("total", total);
-        
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
         response.put("data", data);
-        
+
         return Response.ok(response).build();
     }
     
@@ -404,15 +401,15 @@ public class ApiResource {
     @Path("/human/distribution/wealth")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWealthDistribution() {
-        List<Human> humans = humanService.listHumans(0, 10000);
-        
+        List<Human> humans = Human.findAll().list();
+
         java.util.Map<String, java.util.Map<String, Object>> wealthRanges = new java.util.LinkedHashMap<>();
         wealthRanges.put("低收入 (0-1 万)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
         wealthRanges.put("中低收入 (1 万 -5 万)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
         wealthRanges.put("中等收入 (5 万 -20 万)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
         wealthRanges.put("中高收入 (20 万 -50 万)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
         wealthRanges.put("高收入 (50 万+)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
-        
+
         for (Human human : humans) {
             double wealth = human.wealth;
             String range;
@@ -427,15 +424,15 @@ public class ApiResource {
             } else {
                 range = "高收入 (50 万+)";
             }
-            
+
             java.util.Map<String, Object> rangeData = wealthRanges.get(range);
             rangeData.put("count", (Integer) rangeData.get("count") + 1);
             rangeData.put("total", (Double) rangeData.get("total") + wealth);
         }
-        
+
         long total = humans.size();
         java.util.List<java.util.Map<String, Object>> distribution = new java.util.ArrayList<>();
-        
+
         for (java.util.Map.Entry<String, java.util.Map<String, Object>> entry : wealthRanges.entrySet()) {
             java.util.Map<String, Object> rangeData = entry.getValue();
             java.util.Map<String, Object> item = new java.util.HashMap<>();
@@ -446,15 +443,15 @@ public class ApiResource {
             item.put("percentage", total > 0 ? Math.round((count * 100.0 / total) * 10.0) / 10.0 : 0.0);
             distribution.add(item);
         }
-        
+
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("distribution", distribution);
         data.put("total", total);
-        
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
         response.put("data", data);
-        
+
         return Response.ok(response).build();
     }
     
@@ -570,24 +567,26 @@ public class ApiResource {
         }
         int currentYear = java.time.LocalDate.now().getYear();
         Random rng = new Random();
-        int chunkSize = 500;
+        int chunkSize = 2000;
         int totalCreated = 0;
-        
+
         for (int i = 0; i < count; i += chunkSize) {
             int batchSize = Math.min(chunkSize, count - i);
             List<Human> batch = populationInitializer.initializePopulation(batchSize, currentYear, rng);
             totalCreated += batch.size();
-            
-            try {
-                var em = Human.getEntityManager();
-                if (em != null) {
-                    em.flush();
-                    em.clear();
+
+            if ((i / chunkSize + 1) % 3 == 0 || i + chunkSize >= count) {
+                try {
+                    var em = Human.getEntityManager();
+                    if (em != null) {
+                        em.flush();
+                        em.clear();
+                    }
+                } catch (Exception e) {
                 }
-            } catch (Exception e) {
             }
         }
-        
+
         long totalPopulation = humanService.countHumans();
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
@@ -702,6 +701,8 @@ public class ApiResource {
         long deathCount = 0;
         long marriageCount = 0;
         double totalWealth = 0.0;
+        long maleCount = 0;
+        long femaleCount = 0;
 
         java.util.Map<Integer, Long> classWealthSum = new java.util.HashMap<>();
         java.util.Map<Integer, Long> classCount = new java.util.HashMap<>();
@@ -716,6 +717,13 @@ public class ApiResource {
             if (h.deathYear != null && h.deathYear == currentYear) deathCount++;
             if ("married".equals(h.maritalStatus)) marriageCount++;
             totalWealth += h.wealth;
+
+            int gender = h.gender;
+            if (gender == 1) {
+                maleCount++;
+            } else if (gender == 0) {
+                femaleCount++;
+            }
 
             int cls = h.socialClass;
             classWealthSum.put(cls, classWealthSum.getOrDefault(cls, 0L) + (long) h.wealth);
@@ -802,6 +810,10 @@ public class ApiResource {
         data.put("ageDistribution", ageDistribution);
         data.put("dependencyRatio", Math.round(dependencyRatio * 100.0) / 100.0);
         data.put("urbanizationRate", Math.round(urbanizationRate * 100.0) / 100.0);
+        data.put("maleCount", maleCount);
+        data.put("femaleCount", femaleCount);
+        data.put("maleRatio", Math.round(maleCount * 100.0 / totalPopulation * 10.0) / 10.0);
+        data.put("femaleRatio", Math.round(femaleCount * 100.0 / totalPopulation * 10.0) / 10.0);
 
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);

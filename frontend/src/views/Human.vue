@@ -112,8 +112,8 @@
     <!-- 分页控制 -->
     <div class="pagination-control" v-if="humans.length > 0">
       <div class="pagination-info">
-        <span v-if="filteredHumans.length === 0">暂无匹配数据</span>
-        <span v-else>显示 {{ pagination.startIndex + 1 }} - {{ pagination.endIndex + 1 }} 条，共 {{ filteredHumans.length }} 条</span>
+        <span v-if="humans.length === 0">暂无匹配数据</span>
+        <span v-else>显示 {{ pagination.startIndex + 1 }} - {{ pagination.endIndex + 1 }} 条，共 {{ pagination.total }} 条</span>
       </div>
       <div class="pagination-actions">
         <button 
@@ -153,7 +153,7 @@
       加载中... <span class="loading"></span>
     </div>
     <div v-if="error" class="message message-error">{{ error }}</div>
-    <table class="table" v-if="paginatedHumans.length > 0">
+    <table class="table" v-if="humans.length > 0">
       <thead>
         <tr>
           <th class="sortable">ID</th>
@@ -167,7 +167,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="human in paginatedHumans" :key="human.id">
+        <tr v-for="human in humans" :key="human.id">
           <td>{{ human.id }}</td>
           <td>{{ human.name }}</td>
           <td>{{ human.gender === 0 ? '女' : '男' }}</td>
@@ -469,7 +469,8 @@ export default {
         pageSize: 10,
         totalPages: 0,
         startIndex: 0,
-        endIndex: 0
+        endIndex: 0,
+        total: 0
       },
       // 可视化相关
       visualizationTabs: [
@@ -552,21 +553,21 @@ export default {
     changePage(page) {
       if (page < 1 || page > this.pagination.totalPages) return
       this.pagination.currentPage = page
-      this.updatePagination()
+      this.loadHumans()
     },
     onPageSizeChange() {
       this.pagination.currentPage = 1
-      this.updatePagination()
+      this.loadHumans()
     },
     updatePagination() {
-      const total = this.filteredHumans.length
+      const total = this.pagination.total || 0
       this.pagination.totalPages = Math.ceil(total / this.pagination.pageSize)
       this.pagination.startIndex = (this.pagination.currentPage - 1) * this.pagination.pageSize
       this.pagination.endIndex = Math.min(this.pagination.startIndex + this.pagination.pageSize - 1, total - 1)
-      
+
       if (this.pagination.currentPage > this.pagination.totalPages && this.pagination.totalPages > 0) {
         this.pagination.currentPage = this.pagination.totalPages
-        this.updatePagination()
+        this.loadHumans()
       }
     },
     resetFilters() {
@@ -584,20 +585,22 @@ export default {
       this.loading = true
       this.error = null
       try {
+        const page = (this.pagination.currentPage || 1) - 1
         const response = await axios.get('/api/human/list', {
           params: {
-            page: 0,
-            size: 100
+            page: page,
+            size: this.pagination.pageSize || 50
           }
         })
-        
+
         if (!response.data || !response.data.data || !Array.isArray(response.data.data.list)) {
           throw new Error('API 返回数据格式异常')
         }
-        
+
         this.humans = response.data.data.list
+        this.pagination.total = response.data.data.total || 0
         this.error = null
-        
+
         this.updatePagination()
       } catch (err) {
         this.error = '加载失败：' + (err.message || '未知错误')
