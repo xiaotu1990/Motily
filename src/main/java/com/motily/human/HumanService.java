@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import java.util.List;
 
 @ApplicationScoped
@@ -14,8 +15,17 @@ public class HumanService {
     @PersistenceContext
     EntityManager entityManager;
     
+    @Transactional
     public Human createHuman(String name, int gender, int birthYear, Human father, Human mother) {
         Human human = humanLifecycle.createHuman(name, gender, birthYear, father, mother);
+        human.persist();
+        return human;
+    }
+    
+    @Transactional
+    public Human createHuman(String name, int gender, int birthYear, double wealth, Human father, Human mother) {
+        Human human = humanLifecycle.createHuman(name, gender, birthYear, father, mother);
+        human.wealth = wealth;
         human.persist();
         return human;
     }
@@ -28,10 +38,32 @@ public class HumanService {
         return Human.findById(id);
     }
     
+    @Transactional
     public void updateHuman(Human human) {
-        human.persist();
+        // 先查找现有的实体
+        Human existingHuman = Human.findById(human.id);
+        if (existingHuman != null) {
+            // 更新属性
+            existingHuman.dnsCode = human.dnsCode != null ? human.dnsCode : existingHuman.dnsCode;
+            existingHuman.name = human.name != null ? human.name : existingHuman.name;
+            existingHuman.gender = human.gender;
+            existingHuman.birthYear = human.birthYear;
+            existingHuman.deathYear = human.deathYear;
+            existingHuman.father = human.father;
+            existingHuman.mother = human.mother;
+            existingHuman.wealth = human.wealth;
+            existingHuman.socialClass = human.socialClass;
+            existingHuman.occupation = human.occupation != null ? human.occupation : existingHuman.occupation;
+            existingHuman.personality = human.personality != null ? human.personality : existingHuman.personality;
+            existingHuman.talent = human.talent != null ? human.talent : existingHuman.talent;
+            existingHuman.belief = human.belief != null ? human.belief : existingHuman.belief;
+            existingHuman.updatedAt = java.time.LocalDateTime.now();
+            // 保存更新
+            existingHuman.persist();
+        }
     }
     
+    @Transactional
     public void ageHumans(int currentYear) {
         List<Human> humans = Human.findAll().list();
         for (Human human : humans) {

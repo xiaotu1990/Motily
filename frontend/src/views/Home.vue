@@ -6,6 +6,11 @@
     </div>
     <div class="features">
       <div class="feature-card">
+        <h3>社会总览</h3>
+        <p>直观查看社会各项指标，掌握整体发展态势</p>
+        <router-link to="/overview" class="btn">进入</router-link>
+      </div>
+      <div class="feature-card">
         <h3>数字人管理</h3>
         <p>创建和管理数字人，查看他们的属性和状态</p>
         <router-link to="/human" class="btn">进入</router-link>

@@ -3,20 +3,15 @@ package com.motily.web;
 import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
 import io.quarkus.runtime.StartupEvent;
-import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 
-@Path("/")
+@Path("/api/web")
 @ApplicationScoped
-@RunOnVirtualThread
 public class WebResource {
-
-    @Inject
-    Template index;
 
     @Inject
     Template human;
@@ -32,12 +27,6 @@ public class WebResource {
 
     @Inject
     Template event;
-
-    @GET
-    @Produces(MediaType.TEXT_HTML)
-    public TemplateInstance index() {
-        return index.instance();
-    }
 
     @GET
     @Path("human")
@@ -74,14 +63,7 @@ public class WebResource {
         return event.instance();
     }
 
-    @GET
-    @Path("test")
-    @Produces(MediaType.TEXT_PLAIN)
-    public String test() {
-        return "Test endpoint works!";
-    }
-
     void onStart(@Observes StartupEvent event) {
-        System.out.println("Motily Application started");
+        System.out.println("Motily Application started - serving Vue SPA from /");
     }
 }

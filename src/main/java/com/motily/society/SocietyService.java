@@ -52,7 +52,12 @@ public class SocietyService {
         return SocialIndicator.find("year = ?1", year).firstResult();
     }
     
-    public void evolveSociety(int year) {
-        socialEvolution.evolveSociety(year);
+    public void evolveSociety(int year, String theme) {
+        socialEvolution.evolveSociety(year, theme);
+    }
+    
+    public List<SocialEvent> listSocialEventsByTimeline(Long timelineId) {
+        // 这里需要根据时间轴ID查询社会事件，暂时返回所有事件
+        return SocialEvent.findAll().list();
     }
 }

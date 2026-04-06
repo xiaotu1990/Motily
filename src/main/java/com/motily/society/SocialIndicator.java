@@ -21,4 +21,16 @@ public class SocialIndicator extends PanacheEntity {
     
     @Column(name = "created_at", nullable = false) 
     public LocalDateTime createdAt;
+    
+    @Override
+    public String toString() {
+        return "{" +
+            "\"id\": " + id +
+            ", \"year\": " + year +
+            ", \"classDistribution\": " + (classDistribution != null ? classDistribution : "null") +
+            ", \"occupationStructure\": " + (occupationStructure != null ? occupationStructure : "null") +
+            ", \"wealthDistribution\": " + (wealthDistribution != null ? wealthDistribution : "null") +
+            ", \"createdAt\": \"" + createdAt + "\"" +
+            "}";
+    }
 }

@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;
 import java.util.Random;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ApplicationScoped
 public class HumanLifecycle {
@@ -12,6 +13,7 @@ public class HumanLifecycle {
     DnsService dnsService;
     
     private Random random = new Random();
+    private ObjectMapper objectMapper = new ObjectMapper();
     
     public Human createHuman(String name, int gender, int birthYear, Human father, Human mother) {
         Human human = new Human();
@@ -30,9 +32,16 @@ public class HumanLifecycle {
         
         // 解析DNS编码，设置初始属性
         var attributes = dnsService.parseDns(human.dnsCode);
-        human.personality = attributes.get("personality").toString();
-        human.talent = attributes.get("talent").toString();
-        human.belief = attributes.get("belief").toString();
+        try {
+            human.personality = objectMapper.writeValueAsString(attributes.get("personality"));
+            human.talent = objectMapper.writeValueAsString(attributes.get("talent"));
+            human.belief = objectMapper.writeValueAsString(attributes.get("belief"));
+        } catch (Exception e) {
+            // 处理序列化异常，使用默认值
+            human.personality = "{}";
+            human.talent = "{}";
+            human.belief = "{}";
+        }
         
         // 设置初始财富
         if (father != null && mother != null) {

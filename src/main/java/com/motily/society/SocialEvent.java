@@ -19,6 +19,9 @@ public class SocialEvent extends PanacheEntity {
     @Column(name = "influence_score", nullable = false) 
     public int influenceScore;
     
+    @Column(name = "probability", nullable = false) 
+    public int probability;
+    
     @Column(name = "created_at", nullable = false) 
     public LocalDateTime createdAt;
 }

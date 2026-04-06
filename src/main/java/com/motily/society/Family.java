@@ -31,4 +31,16 @@ public class Family extends PanacheEntity {
     
     @Column(name = "updated_at", nullable = false) 
     public LocalDateTime updatedAt;
+    
+    @Override
+    public String toString() {
+        return "{" +
+            "\"id\": " + id +
+            ", \"name\": \"" + (name != null ? name : "") + "\"" +
+            ", \"totalWealth\": " + totalWealth +
+            ", \"socialInfluence\": " + socialInfluence +
+            ", \"createdAt\": \"" + createdAt + "\"" +
+            ", \"updatedAt\": \"" + updatedAt + "\"" +
+            "}";
+    }
 }

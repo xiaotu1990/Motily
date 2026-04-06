@@ -21,7 +21,7 @@ public class DnsService {
     public boolean validateDns(String dns) {
         try {
             byte[] bytes = java.util.Base64.getUrlDecoder().decode(dns);
-            return bytes.length == 256;
+            return bytes.length == 64;
         } catch (Exception e) {
             return false;
         }

@@ -4,7 +4,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 public class DnsGenerator {
-    private static final int DNS_LENGTH = 256;
+    private static final int DNS_LENGTH = 64;
     private static final SecureRandom random = new SecureRandom();
 
     public static String generateDns() {

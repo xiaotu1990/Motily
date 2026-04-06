@@ -1,5 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import Dashboard from '../views/Dashboard.vue'
 import Human from '../views/Human.vue'
 import Simulation from '../views/Simulation.vue'
 import Indicator from '../views/Indicator.vue'
@@ -9,6 +10,11 @@ import Event from '../views/Event.vue'
 const routes = [
   {
     path: '/',
+    name: 'Dashboard',
+    component: Dashboard
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: Home
   },
@@ -40,7 +46,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

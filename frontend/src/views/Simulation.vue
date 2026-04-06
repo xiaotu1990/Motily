@@ -8,10 +8,19 @@
           type="number" 
           v-model.number="form.years" 
           placeholder="请输入模拟年限" 
-          min="1" 
-          max="100"
+          min="1"
           :disabled="loading"
         >
+      </div>
+      <div class="form-group">
+        <label>模拟主题:</label>
+        <select v-model="form.theme" class="form-control" :disabled="loading">
+          <option value="normal">正常经济</option>
+          <option value="inflation">通货膨胀</option>
+          <option value="deflation">通货紧缩</option>
+          <option value="recession">经济衰退</option>
+          <option value="boom">经济繁荣</option>
+        </select>
       </div>
       <div class="form-group">
         <button 
@@ -66,6 +75,24 @@
           <label>状态:</label>
           <span :class="['status-badge', statusClass]">{{ statusText }}</span>
         </div>
+        <div class="status-item">
+          <label>模拟主题:</label>
+          <span>{{ getThemeText() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" v-if="simulationId && events.length > 0">
+      <h3>社会事件</h3>
+      <div class="events-list">
+        <div v-for="event in events" :key="event.id" class="event-item">
+          <div class="event-header">
+            <span class="event-year">{{ event.eventYear }}年</span>
+            <span class="event-type">{{ event.eventType }}</span>
+          </div>
+          <div class="event-description">{{ event.description }}</div>
+          <div class="event-probability">发生概率: {{ event.probability }}%</div>
+        </div>
       </div>
     </div>
   </div>
@@ -79,13 +106,15 @@ export default {
   data() {
     return {
       form: {
-        years: 10
+        years: 10,
+        theme: 'normal'
       },
       simulationId: null,
       currentYear: 2000,
       status: 0,
       loading: false,
-      error: null
+      error: null,
+      events: []
     }
   },
   computed: {
@@ -115,15 +144,28 @@ export default {
       this.loading = true
       this.error = null
       try {
-        const response = await axios.post(`/api/simulation/start?years=${this.form.years}`)
+        const response = await axios.post('/api/simulation/start', {
+          years: this.form.years,
+          theme: this.form.theme
+        })
         this.simulationId = response.data.data.simulationId
         alert('模拟开始')
         await this.loadStatus()
+        await this.loadEvents()
       } catch (err) {
         this.error = '开始模拟失败，请重试'
         console.error('开始模拟失败:', err)
       } finally {
         this.loading = false
+      }
+    },
+    async loadEvents() {
+      if (!this.simulationId) return
+      try {
+        const response = await axios.get(`/api/simulation/events?simulationId=${this.simulationId}`)
+        this.events = response.data.data || []
+      } catch (err) {
+        console.error('加载事件失败:', err)
       }
     },
     async pauseSimulation() {
@@ -177,9 +219,20 @@ export default {
         const response = await axios.get(`/api/simulation/status?simulationId=${this.simulationId}`)
         this.currentYear = response.data.data.currentYear
         this.status = response.data.data.status
+        await this.loadEvents()
       } catch (err) {
         console.error('加载状态失败:', err)
       }
+    },
+    getThemeText() {
+      const themeMap = {
+        'normal': '正常经济',
+        'inflation': '通货膨胀',
+        'deflation': '通货紧缩',
+        'recession': '经济衰退',
+        'boom': '经济繁荣'
+      }
+      return themeMap[this.form.theme] || '正常经济'
     }
   }
 }
@@ -225,5 +278,67 @@ export default {
 .status-completed {
   background-color: #e3f2fd;
   color: #1976d2;
+}
+
+.events-list {
+  margin-top: 1rem;
+}
+
+.event-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #667eea;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.event-year {
+  font-weight: bold;
+  color: #667eea;
+}
+
+.event-type {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+}
+
+.event-description {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.event-probability {
+  font-size: 0.875rem;
+  color: #666;
+  font-style: italic;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #666;
 }
 </style>

@@ -1,18 +1,23 @@
 package com.motily.human;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Column;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.ConstraintMode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
-public class Human extends PanacheEntity {
-    @Column(name = "dns_code", unique = true, length = 256) 
+public class Human extends PanacheEntityBase {
+    @Id
+    public Long id = Math.abs(UUID.randomUUID().getMostSignificantBits());
+    @Column(name = "dns_code", unique = true, length = 512) 
     public String dnsCode;
     
     @Column(name = "name", nullable = false, length = 50) 
@@ -29,10 +34,12 @@ public class Human extends PanacheEntity {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "father_id", nullable = true, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
     public Human father;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mother_id", nullable = true, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @JsonIgnore
     public Human mother;
     
     @Column(name = "wealth", nullable = false) 
@@ -53,9 +60,45 @@ public class Human extends PanacheEntity {
     @Column(name = "belief", nullable = false, columnDefinition = "JSON") 
     public String belief;
     
+    @Column(name = "region_id", nullable = true) 
+    public Integer regionId;
+    
+    @Column(name = "marital_status", length = 20) 
+    public String maritalStatus = "single";
+    
+    @Column(name = "spouse_id", nullable = true) 
+    public Long spouseId;
+    
+    @Column(name = "pregnancy_weeks") 
+    public Integer pregnancyWeeks = 0;
+    
     @Column(name = "created_at", nullable = false) 
     public LocalDateTime createdAt;
     
     @Column(name = "updated_at", nullable = false) 
     public LocalDateTime updatedAt;
+    
+    @Override
+    public String toString() {
+        return "{" +
+            "\"id\": " + id +
+            ", \"dnsCode\": \"" + (dnsCode != null ? dnsCode : "") + "\"" +
+            ", \"name\": \"" + (name != null ? name : "") + "\"" +
+            ", \"gender\": " + gender +
+            ", \"birthYear\": " + birthYear +
+            ", \"deathYear\": " + (deathYear != null ? deathYear : "null") +
+            ", \"wealth\": " + wealth +
+            ", \"socialClass\": " + socialClass +
+            ", \"occupation\": \"" + (occupation != null ? occupation : "") + "\"" +
+            ", \"personality\": \"" + (personality != null ? personality : "{}") + "\"" +
+            ", \"talent\": \"" + (talent != null ? talent : "{}") + "\"" +
+            ", \"belief\": \"" + (belief != null ? belief : "{}") + "\"" +
+            ", \"regionId\": " + (regionId != null ? regionId : "null") +
+            ", \"maritalStatus\": \"" + (maritalStatus != null ? maritalStatus : "single") + "\"" +
+            ", \"spouseId\": " + (spouseId != null ? spouseId : "null") +
+            ", \"pregnancyWeeks\": " + (pregnancyWeeks != null ? pregnancyWeeks : 0) +
+            ", \"createdAt\": \"" + createdAt + "\"" +
+            ", \"updatedAt\": \"" + updatedAt + "\"" +
+            "}";
+    }
 }

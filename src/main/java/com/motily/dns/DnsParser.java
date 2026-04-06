@@ -5,35 +5,35 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DnsParser {
-    private static final int DNS_LENGTH = 256;
+    private static final int DNS_LENGTH = 64;
 
     public static Map<String, Object> parseDns(String dns) {
         byte[] bytes = Base64.getUrlDecoder().decode(dns);
         Map<String, Object> attributes = new HashMap<>();
 
-        // 解析性格特征 (0-31 bytes)
-        attributes.put("personality", parsePersonality(bytes, 0, 32));
+        // 解析性格特征 (0-15 bytes)
+        attributes.put("personality", parsePersonality(bytes, 0, 16));
 
-        // 解析天赋特征 (32-63 bytes)
-        attributes.put("talent", parseTalent(bytes, 32, 64));
+        // 解析天赋特征 (16-31 bytes)
+        attributes.put("talent", parseTalent(bytes, 16, 32));
 
-        // 解析观念倾向 (64-95 bytes)
-        attributes.put("belief", parseBelief(bytes, 64, 96));
+        // 解析观念倾向 (32-47 bytes)
+        attributes.put("belief", parseBelief(bytes, 32, 48));
 
-        // 解析健康状况 (96-127 bytes)
-        attributes.put("health", parseHealth(bytes, 96, 128));
+        // 解析健康状况 (48-63 bytes)
+        attributes.put("health", parseHealth(bytes, 48, 64));
 
-        // 解析社交能力 (128-159 bytes)
-        attributes.put("social", parseSocial(bytes, 128, 160));
+        // 解析社交能力 (0-15 bytes，复用前面的字节)
+        attributes.put("social", parseSocial(bytes, 0, 16));
 
-        // 解析财富潜力 (160-191 bytes)
-        attributes.put("wealth", parseWealth(bytes, 160, 192));
+        // 解析财富潜力 (16-31 bytes，复用前面的字节)
+        attributes.put("wealth", parseWealth(bytes, 16, 32));
 
-        // 解析职业倾向 (192-223 bytes)
-        attributes.put("occupation", parseOccupation(bytes, 192, 224));
+        // 解析职业倾向 (32-47 bytes，复用前面的字节)
+        attributes.put("occupation", parseOccupation(bytes, 32, 48));
 
-        // 解析其他特征 (224-255 bytes)
-        attributes.put("other", parseOther(bytes, 224, 256));
+        // 解析其他特征 (48-63 bytes，复用前面的字节)
+        attributes.put("other", parseOther(bytes, 48, 64));
 
         return attributes;
     }
