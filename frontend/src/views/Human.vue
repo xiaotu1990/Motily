@@ -110,10 +110,10 @@
     </div>
 
     <!-- 分页控制 -->
-    <div class="pagination-control" v-if="humans.length > 0">
+    <div class="pagination-control" v-if="pagination.total > 0">
       <div class="pagination-info">
-        <span v-if="humans.length === 0">暂无匹配数据</span>
-        <span v-else>显示 {{ pagination.startIndex + 1 }} - {{ pagination.endIndex + 1 }} 条，共 {{ pagination.total }} 条</span>
+        <span v-if="filteredHumans.length === 0">暂无匹配数据</span>
+        <span v-else>显示 {{ pagination.startIndex + 1 }} - {{ Math.min(pagination.endIndex + 1, pagination.total) }} 条，共 {{ pagination.total }} 条</span>
       </div>
       <div class="pagination-actions">
         <button 
@@ -153,7 +153,7 @@
       加载中... <span class="loading"></span>
     </div>
     <div v-if="error" class="message message-error">{{ error }}</div>
-    <table class="table" v-if="humans.length > 0">
+    <table class="table" v-if="filteredHumans.length > 0">
       <thead>
         <tr>
           <th class="sortable">ID</th>
@@ -167,7 +167,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="human in humans" :key="human.id">
+        <tr v-for="human in filteredHumans" :key="human.id">
           <td>{{ human.id }}</td>
           <td>{{ human.name }}</td>
           <td>{{ human.gender === 0 ? '女' : '男' }}</td>
@@ -186,7 +186,8 @@
       </tbody>
     </table>
     <div v-else class="empty-state">
-      <p>暂无数字人数据</p>
+      <p v-if="humans.length > 0">当前筛选条件下暂无匹配数据</p>
+      <p v-else>暂无数字人数据</p>
     </div>
     
     <!-- 数字人详情模态框 -->
