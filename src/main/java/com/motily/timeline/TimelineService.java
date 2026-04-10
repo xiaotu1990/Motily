@@ -4,8 +4,17 @@ import com.motily.engine.DemographyEngine;
 import com.motily.engine.EconomicEngine;
 import com.motily.engine.MarriageEngine;
 import com.motily.engine.MobilityEngine;
+import com.motily.education.EducationEngine;
+import com.motily.health.HealthEngine;
+import com.motily.culture.BeliefEngine;
+import com.motily.economy.InvestmentEngine;
+import com.motily.economy.IndustryEngine;
+import com.motily.society.SocialNetworkEngine;
+import com.motily.simulation.PolicyEngine;
+import com.motily.region.RegionService;
 import com.motily.human.HumanService;
 import com.motily.society.SocietyService;
+import com.motily.human.MemoryService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -36,6 +45,33 @@ public class TimelineService {
 
     @Inject
     EconomicEngine economicEngine;
+
+    @Inject
+    EducationEngine educationEngine;
+
+    @Inject
+    HealthEngine healthEngine;
+
+    @Inject
+    BeliefEngine beliefEngine;
+
+    @Inject
+    InvestmentEngine investmentEngine;
+
+    @Inject
+    IndustryEngine industryEngine;
+
+    @Inject
+    SocialNetworkEngine socialNetworkEngine;
+
+    @Inject
+    PolicyEngine policyEngine;
+
+    @Inject
+    RegionService regionService;
+    
+    @Inject
+    MemoryService memoryService;
     
     @Transactional
     public Timeline createTimeline(int startYear) {
@@ -76,11 +112,25 @@ public class TimelineService {
 
         demographyEngine.processWeeklyDemography(currentYear, currentWeek, rng);
         marriageEngine.processWeeklyMarriages(currentYear, currentWeek);
+        healthEngine.processWeeklyHealth(currentYear, currentWeek, rng);
+        educationEngine.processWeeklyEducation(currentYear, currentWeek, rng);
+        socialNetworkEngine.processWeeklyNetwork(currentYear, currentWeek, rng);
         mobilityEngine.processWeeklyMobility(currentYear);
+        industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng);
+        investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng);
         economicEngine.processWeeklyEconomy(currentYear, currentWeek);
+        regionService.updateRegionalFactors(rng);
+        beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng);
+        policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng);
 
         if (currentWeek == 1) {
             societyService.evolveSociety(currentYear, "normal");
+        }
+
+        // 处理记忆衰减
+        java.util.List<com.motily.human.Human> humans = com.motily.human.Human.findAll().list();
+        for (com.motily.human.Human human : humans) {
+            memoryService.decayMemories(human);
         }
 
         managedTimeline.currentYear = currentYear;
@@ -147,8 +197,16 @@ public class TimelineService {
 
         demographyEngine.processWeeklyDemography(currentYear, currentWeek, rng);
         marriageEngine.processWeeklyMarriages(currentYear, currentWeek);
+        healthEngine.processWeeklyHealth(currentYear, currentWeek, rng);
+        educationEngine.processWeeklyEducation(currentYear, currentWeek, rng);
+        socialNetworkEngine.processWeeklyNetwork(currentYear, currentWeek, rng);
         mobilityEngine.processWeeklyMobility(currentYear);
+        industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng);
+        investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng);
         economicEngine.processWeeklyEconomy(currentYear, currentWeek);
+        regionService.updateRegionalFactors(rng);
+        beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng);
+        policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng);
 
         if (currentWeek == 1) {
             societyService.evolveSociety(currentYear, theme);

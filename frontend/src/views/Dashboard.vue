@@ -21,34 +21,18 @@
       <div class="header-right">
         <!-- 快捷操作按钮组 -->
         <div class="quick-actions">
-          <router-link to="/human" class="quick-btn" title="生成数字人">
-            <span class="quick-icon">➕</span>
-            <span class="quick-label">生成数字人</span>
-          </router-link>
-          <router-link to="/simulation" class="quick-btn" title="运行模拟">
-            <span class="quick-icon">▶️</span>
-            <span class="quick-label">运行模拟</span>
-          </router-link>
-          <router-link to="/indicator" class="quick-btn" title="指标分析">
-            <span class="quick-icon">📊</span>
-            <span class="quick-label">指标分析</span>
-          </router-link>
-          <button class="quick-btn refresh-btn" @click="refreshAllData" :disabled="loading" title="刷新数据">
-            <span class="quick-icon">{{ loading ? '⏳' : '🔄' }}</span>
-            <span class="quick-label">{{ loading ? '刷新中...' : '刷新' }}</span>
-          </button>
           <button class="quick-btn batch-btn" @click="showBatchDialog = true" title="批量添加人口">
             <span class="quick-icon">👥</span>
             <span class="quick-label">批量添加</span>
           </button>
-        </div>
-        <div class="current-time">
-          <span class="time-label">当前时间</span>
-          <span class="time-value">{{ currentTime }}</span>
+          <button class="quick-btn" :class="{ 'auto-run-active': autoRunEnabled }" @click="toggleAutoRun" title="自动运行">
+            <span class="quick-icon">{{ autoRunEnabled ? '⏸️' : '▶️' }}</span>
+            <span class="quick-label">{{ autoRunEnabled ? '暂停' : '自动运行' }}</span>
+          </button>
         </div>
         <div class="sim-time" v-if="simulationTime">
           <span class="sim-label">模拟时间</span>
-          <span class="sim-value">第{{ simulationTime.year }}年 第{{ simulationTime.week }}周</span>
+          <span class="sim-value" :class="{ 'time-change': timeChangeFlag }">第{{ simulationTime.year }}年 第{{ simulationTime.week }}周</span>
         </div>
       </div>
     </div>
@@ -135,7 +119,7 @@
               </div>
             </div>
             <div class="chart-box">
-              <h4>人口变化趋势</h4>
+              <h4>每年新增人口趋势</h4>
               <div class="trend-tabs-compact">
                 <button
                   v-for="period in ['周', '年', '全部']"
@@ -350,6 +334,12 @@ export default {
       lastUpdateTime: '-',
       autoRefreshInterval: 30000,
       refreshTimer: null,
+      timeUpdateTimer: null,
+      timeUpdateInterval: 5000,
+      timeChangeFlag: false,
+      autoRunEnabled: false,
+      autoRunTimer: null,
+      autoRunInterval: 10000,
 
       stats: {
         totalPopulation: 0,
@@ -417,9 +407,12 @@ export default {
     setInterval(this.updateCurrentTime, 1000)
     this.loadAllData()
     this.startAutoRefresh()
+    this.startTimeUpdate()
   },
   beforeUnmount() {
     this.stopAutoRefresh()
+    this.stopTimeUpdate()
+    this.stopAutoRun()
     Object.values(this.charts).forEach(chart => chart?.dispose())
   },
   methods: {
@@ -447,7 +440,8 @@ export default {
           wealthRes,
           trendRes,
           derivedStatsRes,
-          regionRes
+          regionRes,
+          simulationTimeRes
         ] = await Promise.all([
           axios.get('/api/human/stats'),
           axios.get('/api/human/distribution/social-class'),
@@ -455,7 +449,8 @@ export default {
           axios.get('/api/human/distribution/wealth'),
           axios.get('/api/indicator/trend', { params: { startYear: 2000, endYear: new Date().getFullYear() } }),
           axios.get('/api/human/derived-stats'),
-          axios.get('/api/human/distribution/region')
+          axios.get('/api/human/distribution/region'),
+          axios.get('/api/simulation/time')
         ])
 
         const humanStats = humanStatsRes.data?.data || {}
@@ -473,6 +468,10 @@ export default {
         this.calculateDerivedMetrics(derivedStats)
 
         this.regionData = regionRes.data?.data || { distribution: [], total: 0 }
+
+        // 更新模拟时间
+        const simulationTimeData = simulationTimeRes.data?.data || { year: 2024, week: 1 }
+        this.updateSimulationTime(simulationTimeData)
 
         this.calculateStability()
 
@@ -500,13 +499,54 @@ export default {
       }
     },
 
+    async updateSimulationTime(newTime) {
+      const oldYear = this.simulationTime.year
+      const oldWeek = this.simulationTime.week
+      
+      this.simulationTime = newTime
+      
+      // 检测时间变化
+      if (oldYear !== newTime.year || oldWeek !== newTime.week) {
+        this.timeChangeFlag = true
+        console.log('模拟时间更新:', oldYear, '年', oldWeek, '周 →', newTime.year, '年', newTime.week, '周')
+        
+        // 时间变化时，触发数据刷新
+        setTimeout(() => {
+          this.timeChangeFlag = false
+        }, 1000)
+      }
+    },
+
+    async fetchSimulationTime() {
+      try {
+        const response = await axios.get('/api/simulation/time')
+        const simulationTimeData = response.data?.data || { year: 2024, week: 1 }
+        this.updateSimulationTime(simulationTimeData)
+      } catch (err) {
+        console.error('获取模拟时间失败:', err)
+      }
+    },
+
+    startTimeUpdate() {
+      this.timeUpdateTimer = setInterval(() => {
+        this.fetchSimulationTime()
+      }, this.timeUpdateInterval)
+    },
+
+    stopTimeUpdate() {
+      if (this.timeUpdateTimer) {
+        clearInterval(this.timeUpdateTimer)
+        this.timeUpdateTimer = null
+      }
+    },
+
     calculateDerivedMetrics(derivedStats = null) {
       if (this.stats.totalPopulation > 0) {
         this.stats.perCapitaWealth = Math.round(this.stats.totalWealth / this.stats.totalPopulation)
       }
 
       if (derivedStats) {
-        if (derivedStats.maleRatio !== undefined && derivedStats.maleRatio > 0) {
+        if (derivedStats.maleRatio !== undefined) {
           this.stats.maleRatio = derivedStats.maleRatio
           this.stats.femaleRatio = derivedStats.femaleRatio || (100 - derivedStats.maleRatio)
         }
@@ -639,8 +679,13 @@ export default {
       this.charts.region = echarts.init(this.$refs.regionChart)
 
       const topRegions = (this.regionData.distribution || []).slice(0, 15)
-      const names = topRegions.map(d => d.category || '')
-      const values = topRegions.map(d => d.value || 0)
+      // 检查数据结构，适配后端返回的格式
+      const names = topRegions.map(d => {
+        if (d.category) return d.category
+        if (d.regionId) return `地区 ${d.regionId}`
+        return '未知地区'
+      })
+      const values = topRegions.map(d => d.value || d.count || 0)
 
       const option = {
         tooltip: { trigger: 'axis', formatter: p => `${p[0].name}: ${p[0].value.toLocaleString()} 人` },
@@ -776,6 +821,12 @@ export default {
       const years = this.trendData.map(d => d.year || '')
       const totalPopulations = this.trendData.map(d => d.totalPopulation || 0)
       
+      // 计算每年新增人口数据
+      const newPopulations = [0] // 第一年没有前一年数据，设为0
+      for (let i = 1; i < totalPopulations.length; i++) {
+        newPopulations.push(totalPopulations[i] - totalPopulations[i-1])
+      }
+      
       // 从derivedStats获取男女比例用于估算历史趋势
       const maleRatio = this.stats.maleRatio > 0 ? this.stats.maleRatio / 100 : 0.52
       const femaleRatio = this.stats.femaleRatio > 0 ? this.stats.femaleRatio / 100 : 0.48
@@ -804,7 +855,7 @@ export default {
           }
         },
         legend: {
-          data: ['总人数', '男性人数', '女性人数', '出生率(‰)', '死亡率(‰)'],
+          data: ['新增人口', '男性人数', '女性人数', '出生率(‰)', '死亡率(‰)'],
           top: 0,
           textStyle: { fontSize: 11 }
         },
@@ -825,10 +876,10 @@ export default {
         ],
         series: [
           {
-            name: '总人数',
+            name: '新增人口',
             type: 'line',
             smooth: true,
-            data: totalPopulations,
+            data: newPopulations,
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: 'rgba(102, 126, 234, 0.35)' },
@@ -929,10 +980,6 @@ export default {
       return `¥${num.toFixed(2)}`
     },
 
-    refreshAllData() {
-      this.loadAllData()
-    },
-
     startAutoRefresh() {
       this.stopAutoRefresh()
       this.refreshTimer = setInterval(() => {
@@ -944,6 +991,52 @@ export default {
       if (this.refreshTimer) {
         clearInterval(this.refreshTimer)
         this.refreshTimer = null
+      }
+    },
+    
+    toggleAutoRun() {
+      console.log('toggleAutoRun called, current state:', this.autoRunEnabled)
+      this.autoRunEnabled = !this.autoRunEnabled
+      console.log('New state:', this.autoRunEnabled)
+      if (this.autoRunEnabled) {
+        console.log('Starting auto run')
+        this.startAutoRun()
+      } else {
+        console.log('Stopping auto run')
+        this.stopAutoRun()
+      }
+    },
+    
+    async startAutoRun() {
+      console.log('startAutoRun called, interval:', this.autoRunInterval)
+      if (this.autoRunTimer) {
+        console.log('Clearing existing timer')
+        clearInterval(this.autoRunTimer)
+      }
+      this.autoRunTimer = setInterval(async () => {
+        console.log('Auto run interval triggered')
+        try {
+          console.log('Sending step request')
+          const response = await axios.post('/api/simulation/step')
+          console.log('Step response:', response.data)
+          this.fetchSimulationTime()
+          this.loadAllData()
+        } catch (err) {
+          console.error('自动运行失败:', err)
+          console.error('Error details:', err.response?.data)
+          this.autoRunEnabled = false
+          this.stopAutoRun()
+        }
+      }, this.autoRunInterval)
+      console.log('Auto run timer set:', this.autoRunTimer)
+    },
+    
+    stopAutoRun() {
+      console.log('stopAutoRun called, current timer:', this.autoRunTimer)
+      if (this.autoRunTimer) {
+        clearInterval(this.autoRunTimer)
+        this.autoRunTimer = null
+        console.log('Auto run timer cleared')
       }
     },
 
@@ -958,7 +1051,7 @@ export default {
         const result = res.data?.data || {}
         alert(`成功创建 ${result.created || 0} 人!当前总人口: ${(result.totalPopulation || 0).toLocaleString()} 人`)
         this.showBatchDialog = false
-        this.refreshAllData()
+        this.loadAllData()
       } catch (err) {
         alert('批量创建失败: ' + (err.response?.data?.message || err.message))
       } finally {
@@ -1006,6 +1099,8 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  justify-content: space-between;
 }
 
 .quick-actions {
@@ -1042,15 +1137,27 @@ export default {
   transform: none;
 }
 
+.quick-btn.auto-run-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.quick-btn.auto-run-active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
 .quick-icon { font-size: 0.95rem; }
 .quick-label { font-size: 0.8rem; }
 
-.current-time {
+.sim-time {
   text-align: right;
   min-width: 140px;
 }
-.time-label { font-size: 0.72rem; color: #999; display: block; }
-.time-value { font-size: 1rem; font-weight: 600; color: #333; font-family: 'Courier New', monospace; }
+.sim-label { font-size: 0.72rem; color: #999; display: block; }
+.sim-value { font-size: 1rem; font-weight: 600; color: #333; font-family: 'Courier New', monospace; }
 
 /* ========== 主布局：左主内容 | 右侧栏 ========== */
 .main-layout {
@@ -1741,6 +1848,12 @@ export default {
 .sim-time { text-align: right; min-width: 140px; }
 .sim-label { font-size: 0.72rem; color: #999; display: block; }
 .sim-value { font-size: 1rem; font-weight: 600; color: #17a2b8; font-family: 'Courier New', monospace; }
+/* 时间变化动画 */
+.time-change { animation: timeFlash 1s ease-in-out; }
+@keyframes timeFlash {
+  0%, 100% { color: #17a2b8; }
+  50% { color: #28a745; transform: scale(1.05); }
+}
 
 /* Region section */
 .region-section .section-charts { grid-template-columns: 1fr; }

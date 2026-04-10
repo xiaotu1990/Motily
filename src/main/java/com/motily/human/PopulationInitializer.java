@@ -86,6 +86,11 @@ public class PopulationInitializer {
         human.talent = "{}";
         human.belief = "{}";
         human.regionId = regionId;
+        human.educationLevel = getEducationLevelByAge(age, socialClass, rng);
+        human.healthStatus = "健康";
+        human.healthValue = 100;
+        human.industry = getIndustryByOccupation(occupation);
+        human.networkSize = getNetworkSizeByAge(age, socialClass, rng);
         human.maritalStatus = "single";
         human.spouseId = null;
         human.pregnancyWeeks = 0;
@@ -165,5 +170,79 @@ public class PopulationInitializer {
         }
 
         return surname + givenName;
+    }
+
+    private String getEducationLevelByAge(int age, int socialClass, Random rng) {
+        String[] educationLevels = {"小学", "初中", "高中", "大学", "研究生"};
+        if (age < 12) {
+            return "小学";
+        } else if (age < 15) {
+            return "初中";
+        } else if (age < 18) {
+            return "高中";
+        } else if (age < 22) {
+            if (socialClass >= 2 || rng.nextDouble() < 0.6) {
+                return "大学";
+            } else {
+                return "高中";
+            }
+        } else {
+            if (socialClass == 3 && rng.nextDouble() < 0.4) {
+                return "研究生";
+            } else if (socialClass >= 2 || rng.nextDouble() < 0.5) {
+                return "大学";
+            } else {
+                return "高中";
+            }
+        }
+    }
+
+    private String getIndustryByOccupation(String occupation) {
+        if (occupation == null) {
+            return null;
+        }
+        String lowerOccupation = occupation.toLowerCase();
+        if (lowerOccupation.contains("程序员") || lowerOccupation.contains("工程师") || lowerOccupation.contains("设计师")) {
+            return "科技";
+        } else if (lowerOccupation.contains("教师") || lowerOccupation.contains("教授")) {
+            return "教育";
+        } else if (lowerOccupation.contains("医生") || lowerOccupation.contains("护士")) {
+            return "医疗";
+        } else if (lowerOccupation.contains("银行") || lowerOccupation.contains("投资") || lowerOccupation.contains("会计")) {
+            return "金融";
+        } else if (lowerOccupation.contains("农民")) {
+            return "农业";
+        } else if (lowerOccupation.contains("工人") || lowerOccupation.contains("工程师")) {
+            return "制造业";
+        } else if (lowerOccupation.contains("服务员") || lowerOccupation.contains("销售")) {
+            return "服务业";
+        } else if (lowerOccupation.contains("公务员") || lowerOccupation.contains("政府")) {
+            return "政府";
+        } else {
+            return "其他";
+        }
+    }
+
+    private int getNetworkSizeByAge(int age, int socialClass, Random rng) {
+        int baseSize;
+        switch (socialClass) {
+            case 1: baseSize = 20;
+                break;
+            case 2: baseSize = 40;
+                break;
+            case 3: baseSize = 60;
+                break;
+            default: baseSize = 30;
+        }
+        
+        if (age < 18) {
+            return baseSize / 2;
+        } else if (age < 30) {
+            return baseSize;
+        } else if (age < 50) {
+            return baseSize + rng.nextInt(20);
+        } else {
+            return baseSize - rng.nextInt(10);
+        }
     }
 }

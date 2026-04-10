@@ -12,6 +12,8 @@ import jakarta.persistence.ConstraintMode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
 
 @Entity
 public class Human extends PanacheEntityBase {
@@ -63,6 +65,21 @@ public class Human extends PanacheEntityBase {
     @Column(name = "region_id", nullable = true) 
     public Integer regionId;
     
+    @Column(name = "education_level", length = 20) 
+    public String educationLevel = "小学";
+    
+    @Column(name = "health_status", length = 20) 
+    public String healthStatus = "健康";
+    
+    @Column(name = "health_value") 
+    public Integer healthValue = 100;
+    
+    @Column(name = "industry", length = 50) 
+    public String industry;
+    
+    @Column(name = "network_size") 
+    public Integer networkSize = 0;
+    
     @Column(name = "marital_status", length = 20) 
     public String maritalStatus = "single";
     
@@ -73,10 +90,18 @@ public class Human extends PanacheEntityBase {
     public Integer pregnancyWeeks = 0;
     
     @Column(name = "created_at", nullable = false) 
-    public LocalDateTime createdAt;
+    public LocalDateTime createdAt = LocalDateTime.now();
     
     @Column(name = "updated_at", nullable = false) 
-    public LocalDateTime updatedAt;
+    public LocalDateTime updatedAt = LocalDateTime.now();
+    
+    @OneToMany(mappedBy = "human", cascade = CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    @JsonIgnore
+    public java.util.List<com.motily.human.HumanExperience> experiences;
+    
+    @OneToMany(mappedBy = "human", cascade = CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    @JsonIgnore
+    public java.util.List<com.motily.human.HumanMemory> memories;
     
     @Override
     public String toString() {
@@ -94,6 +119,11 @@ public class Human extends PanacheEntityBase {
             ", \"talent\": \"" + (talent != null ? talent : "{}") + "\"" +
             ", \"belief\": \"" + (belief != null ? belief : "{}") + "\"" +
             ", \"regionId\": " + (regionId != null ? regionId : "null") +
+            ", \"educationLevel\": \"" + (educationLevel != null ? educationLevel : "小学") + "\"" +
+            ", \"healthStatus\": \"" + (healthStatus != null ? healthStatus : "健康") + "\"" +
+            ", \"healthValue\": " + healthValue +
+            ", \"industry\": \"" + (industry != null ? industry : "") + "\"" +
+            ", \"networkSize\": " + networkSize +
             ", \"maritalStatus\": \"" + (maritalStatus != null ? maritalStatus : "single") + "\"" +
             ", \"spouseId\": " + (spouseId != null ? spouseId : "null") +
             ", \"pregnancyWeeks\": " + (pregnancyWeeks != null ? pregnancyWeeks : 0) +

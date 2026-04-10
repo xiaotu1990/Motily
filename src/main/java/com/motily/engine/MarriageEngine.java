@@ -2,6 +2,7 @@ package com.motily.engine;
 
 import com.motily.human.Human;
 import com.motily.human.HumanService;
+import com.motily.human.MemoryService;
 import com.motily.society.Marriage;
 import com.motily.society.SocialEvent;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,6 +18,9 @@ import java.util.Random;
 public class MarriageEngine {
     @Inject
     HumanService humanService;
+    
+    @Inject
+    MemoryService memoryService;
 
     private final Random random = new Random();
 
@@ -70,6 +74,12 @@ public class MarriageEngine {
         wife.maritalStatus = "married";
         wife.spouseId = husband.id;
         wife.persist();
+
+        // 记录婚姻经历和记忆
+        String husbandDescription = "与" + wife.name + "结婚";
+        String wifeDescription = "与" + husband.name + "结婚";
+        memoryService.formMemory(husband, "marriage", year, husbandDescription, 3);
+        memoryService.formMemory(wife, "marriage", year, wifeDescription, 3);
 
         recordMarriageEvent(husband, wife, year, week);
 

@@ -4,6 +4,10 @@ import com.motily.human.Human;
 import com.motily.human.HumanService;
 import com.motily.human.PopulationInitializer;
 import com.motily.human.AsyncBatchService;
+import com.motily.human.HumanExperience;
+import com.motily.human.HumanMemory;
+import com.motily.human.MemoryService;
+import com.motily.cache.StatsCacheService;
 import com.motily.society.Marriage;
 import com.motily.society.SocialEvent;
 import com.motily.society.SocialIndicator;
@@ -30,6 +34,9 @@ public class ApiResource {
     HumanService humanService;
 
     @Inject
+    StatsCacheService statsCacheService;
+
+    @Inject
     AsyncBatchService asyncBatchService;
 
     @Inject
@@ -43,6 +50,9 @@ public class ApiResource {
 
     @Inject
     com.motily.region.RegionService regionService;
+    
+    @Inject
+    MemoryService memoryService;
     
     // 数字人管理接口
     @POST
@@ -204,6 +214,52 @@ public class ApiResource {
                 .build();
     }
     
+    // 获取数字人经历
+    @GET
+    @Path("/human/{id}/experiences")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getHumanExperiences(@PathParam("id") Long id) {
+        Human human = Human.findById(id);
+        if (human == null) {
+            return Response.ok().entity("{\"code\": 404, \"data\": {\"message\": \"数字人不存在\"}}")
+                    .build();
+        }
+        List<HumanExperience> experiences = HumanExperience.find("human.id = ?1 ORDER BY eventYear", id).list();
+        return Response.ok().entity("{\"code\": 200, \"data\": " + experiences + "}")
+                .build();
+    }
+    
+    // 获取数字人记忆
+    @GET
+    @Path("/human/{id}/memories")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getHumanMemories(@PathParam("id") Long id) {
+        Human human = Human.findById(id);
+        if (human == null) {
+            return Response.ok().entity("{\"code\": 404, \"data\": {\"message\": \"数字人不存在\"}}")
+                    .build();
+        }
+        List<HumanMemory> memories = HumanMemory.find("human.id = ?1 ORDER BY lastAccessedAt DESC", id).list();
+        return Response.ok().entity("{\"code\": 200, \"data\": " + memories + "}")
+                .build();
+    }
+    
+    // 获取数字人生活轨迹
+    @GET
+    @Path("/human/{id}/life-path")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getHumanLifePath(@PathParam("id") Long id) {
+        Human human = Human.findById(id);
+        if (human == null) {
+            return Response.ok().entity("{\"code\": 404, \"data\": {\"message\": \"数字人不存在\"}}")
+                    .build();
+        }
+        List<HumanExperience> experiences = HumanExperience.find("human.id = ?1 ORDER BY eventYear", id).list();
+        List<HumanMemory> recentMemories = HumanMemory.find("human.id = ?1 ORDER BY lastAccessedAt DESC", id).page(io.quarkus.panache.common.Page.of(0, 10)).list();
+        return Response.ok().entity("{\"code\": 200, \"data\": {\"human\": " + human + ", \"experiences\": " + experiences + ", \"recentMemories\": " + recentMemories + "}}")
+                .build();
+    }
+    
     // 社会模拟接口
     @POST
     @Path("/simulation/start")
@@ -215,6 +271,35 @@ public class ApiResource {
         Timeline timeline = timelineService.createTimeline(2000);
         timelineService.runSimulation(timeline, years, theme);
         return Response.ok().entity("{\"code\": 200, \"data\": {\"simulationId\": " + timeline.id + "}}")
+                .build();
+    }
+    
+    // 获取当前模拟时间
+    @GET
+    @Path("/simulation/time")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getCurrentSimulationTime() {
+        Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+        if (timeline == null) {
+            return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": 2024, \"week\": 1}}")
+                    .build();
+        }
+        return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + "}}")
+                .build();
+    }
+    
+    // 单步推进模拟时间
+    @POST
+    @Path("/simulation/step")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response stepSimulation() {
+        Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+        if (timeline == null) {
+            return Response.ok().entity("{\"code\": 400, \"data\": {\"message\": \"没有活跃的模拟\"}}")
+                    .build();
+        }
+        timelineService.stepForward(timeline);
+        return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + "}}")
                 .build();
     }
     
@@ -304,6 +389,16 @@ public class ApiResource {
     @Path("/human/stats")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getHumanStats() {
+        // 尝试从缓存获取
+        java.util.Map<String, Object> cachedData = statsCacheService.get(StatsCacheService.KEY_HUMAN_STATS);
+        if (cachedData != null) {
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("code", 200);
+            response.put("data", cachedData);
+            return Response.ok(response).build();
+        }
+
+        // 缓存未命中，计算并缓存
         long totalPopulation = humanService.countHumans();
         Number totalWealthResult = Human.getEntityManager().createQuery("SELECT SUM(h.wealth) FROM Human h", Number.class).getSingleResult();
         double totalWealth = totalWealthResult != null ? totalWealthResult.doubleValue() : 0.0;
@@ -311,6 +406,9 @@ public class ApiResource {
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("totalPopulation", totalPopulation);
         data.put("totalWealth", totalWealth);
+
+        // 缓存结果
+        statsCacheService.put(StatsCacheService.KEY_HUMAN_STATS, data);
 
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
@@ -324,6 +422,16 @@ public class ApiResource {
     @Path("/human/distribution/social-class")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSocialClassDistribution() {
+        // 尝试从缓存获取
+        java.util.Map<String, Object> cachedData = statsCacheService.get(StatsCacheService.KEY_SOCIAL_CLASS_DISTRIBUTION);
+        if (cachedData != null) {
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("code", 200);
+            response.put("data", cachedData);
+            return Response.ok(response).build();
+        }
+
+        // 缓存未命中，计算并缓存
         List<Human> humans = Human.findAll().list();
 
         java.util.Map<String, Integer> classCount = new java.util.HashMap<>();
@@ -356,6 +464,9 @@ public class ApiResource {
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("distribution", distribution);
         data.put("total", total);
+
+        // 缓存结果
+        statsCacheService.put(StatsCacheService.KEY_SOCIAL_CLASS_DISTRIBUTION, data);
 
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
@@ -583,6 +694,9 @@ public class ApiResource {
 
         long totalPopulation = humanService.countHumans();
         System.out.println("批量创建完成: " + totalCreated + " 人, 总人口: " + totalPopulation);
+
+        // 清除相关缓存，确保统计数据更新
+        statsCacheService.clearBatchCreateCache();
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("created", totalCreated);

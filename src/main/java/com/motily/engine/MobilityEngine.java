@@ -2,6 +2,7 @@ package com.motily.engine;
 
 import com.motily.human.Human;
 import com.motily.human.HumanService;
+import com.motily.human.MemoryService;
 import com.motily.society.SocialEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -13,6 +14,9 @@ import java.util.Random;
 public class MobilityEngine {
     @Inject
     HumanService humanService;
+    
+    @Inject
+    MemoryService memoryService;
 
     private final Random random = new Random();
 
@@ -73,6 +77,12 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 2;
                 human.persist();
+                
+                // 记录社会阶层变化经历和记忆
+                String[] classNames = {"", "底层", "中层", "上层"};
+                String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[2];
+                memoryService.formMemory(human, "social", currentYear, description, 2);
+                
                 recordMobilityEvent(human, fromClass, 2, currentYear);
             }
         }
@@ -87,6 +97,12 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 1;
                 human.persist();
+                
+                // 记录社会阶层变化经历和记忆
+                String[] classNames = {"", "底层", "中层", "上层"};
+                String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[1];
+                memoryService.formMemory(human, "social", currentYear, description, 2);
+                
                 recordMobilityEvent(human, fromClass, 1, currentYear);
                 return;
             }
@@ -97,6 +113,12 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 3;
                 human.persist();
+                
+                // 记录社会阶层变化经历和记忆
+                String[] classNames = {"", "底层", "中层", "上层"};
+                String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[3];
+                memoryService.formMemory(human, "social", currentYear, description, 3);
+                
                 recordMobilityEvent(human, fromClass, 3, currentYear);
             }
         }
@@ -111,6 +133,12 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 2;
                 human.persist();
+                
+                // 记录社会阶层变化经历和记忆
+                String[] classNames = {"", "底层", "中层", "上层"};
+                String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[2];
+                memoryService.formMemory(human, "social", currentYear, description, 2);
+                
                 recordMobilityEvent(human, fromClass, 2, currentYear);
                 return;
             }
@@ -121,6 +149,12 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 1;
                 human.persist();
+                
+                // 记录社会阶层变化经历和记忆
+                String[] classNames = {"", "底层", "中层", "上层"};
+                String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[1];
+                memoryService.formMemory(human, "social", currentYear, description, 3);
+                
                 recordMobilityEvent(human, fromClass, 1, currentYear);
             }
         }
