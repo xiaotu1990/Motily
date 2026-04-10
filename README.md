@@ -109,7 +109,7 @@ Its core innovation integrates four key capabilities: *digital DNS genetic codin
 | Category | Technology Selection |
 | ------- | ------------------ |
 | Core Framework | Quarkus 3.13+ (built-in Undertow + Hibernate ORM) |
-| Data Storage | MySQL 8.0 + Quarkus Cache (Caffeine) |
+| Data Storage | MySQL 8.0 + Quarkus Cache (Caffeine) + JBoot Cache |
 | LLM Integration | Quarkus HTTP Client + Local LLM (Qwen3.5-0.8B) / Commercial API |
 | Development Language | Java 23 |
 | Build Tool | Maven/Gradle |
@@ -144,15 +144,15 @@ git clone https://github.com/xiaotu1990/Motily.git
 
 cd Motily
 
-# 2. Configure database (modify jboot.properties)
-vim src/main/resources/jboot.properties
+# 2. Configure database (modify application.properties)
+vim src/main/resources/application.properties
 
-# Configuration: jboot.datasource.url=jdbc:mysql://localhost:3306/motily
-#                jboot.datasource.user=root
-#                jboot.datasource.password=your-password
+# Configuration: quarkus.datasource.jdbc.url=jdbc:mysql://localhost:3306/motily
+#                quarkus.datasource.username=root
+#                quarkus.datasource.password=your-password
 
 # 3. Initialize database (execute SQL script)
-mysql -u root -p motily_init.sql
+mysql -u root -p < src/main/resources/import.sql
 
 # 4. Compile and package
 mvn clean package -Dmaven.test.skip=true

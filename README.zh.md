@@ -109,7 +109,7 @@ Motily 是一个基于 **Quarkus 3.x + MySQL 8.0** 构建的企业级轻量级�
 | 类别      | 技术选型                                          |
 | ------- | --------------------------------------------- |
 | 核心框架    | Quarkus 3.13+ (内置 Undertow + Hibernate ORM)      |
-| 数据存储    | MySQL 8.0 + Quarkus Cache (Caffeine)            |
+| 数据存储    | MySQL 8.0 + Quarkus Cache (Caffeine) + JBoot Cache            |
 | 大模型集成   | Quarkus HTTP Client + 本地 LLM (Qwen3.5-0.8B) / 商用 API |
 | 开发语言    | Java 23                                      |
 | 构建工具    | Maven/Gradle                                         |
@@ -144,15 +144,15 @@ git clone https://github.com/xiaotu1990/Motily.git
 
 cd Motily
 
-# 2. 配置数据库（修改jboot.properties）
-vim src/main/resources/jboot.properties
+# 2. 配置数据库（修改application.properties）
+vim src/main/resources/application.properties
 
-# 配置：jboot.datasource.url=jdbc:mysql://localhost:3306/motily
-#       jboot.datasource.user=root
-#       jboot.datasource.password=your-password
+# 配置：quarkus.datasource.jdbc.url=jdbc:mysql://localhost:3306/motily
+#       quarkus.datasource.username=root
+#       quarkus.datasource.password=your-password
 
 # 3. 初始化数据库（执行SQL脚本）
-mysql -u root -p motily_init.sql
+mysql -u root -p < src/main/resources/import.sql
 
 # 4. 编译打包
 mvn clean package -Dmaven.test.skip=true
