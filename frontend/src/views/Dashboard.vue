@@ -983,7 +983,10 @@ export default {
     startAutoRefresh() {
       this.stopAutoRefresh()
       this.refreshTimer = setInterval(() => {
-        this.loadAllData()
+        // 只有在自动运行未启用时才自动刷新
+        if (!this.autoRunEnabled) {
+          this.loadAllData()
+        }
       }, this.autoRefreshInterval)
     },
 
@@ -1001,9 +1004,13 @@ export default {
       if (this.autoRunEnabled) {
         console.log('Starting auto run')
         this.startAutoRun()
+        // 自动运行时暂停自动刷新，因为自动运行已经会刷新数据
+        this.stopAutoRefresh()
       } else {
         console.log('Stopping auto run')
         this.stopAutoRun()
+        // 停止自动运行后恢复自动刷新
+        this.startAutoRefresh()
       }
     },
     
@@ -1019,8 +1026,19 @@ export default {
           console.log('Sending step request')
           const response = await axios.post('/api/simulation/step')
           console.log('Step response:', response.data)
-          this.fetchSimulationTime()
-          this.loadAllData()
+          // 等待API响应后再更新时间和数据
+          if (response.data && response.data.code === 200) {
+            // 直接使用API返回的时间数据
+            const newTime = response.data.data
+            if (newTime) {
+              this.updateSimulationTime(newTime)
+            } else {
+              // 如果API没有返回时间数据，再单独获取
+              await this.fetchSimulationTime()
+            }
+            // 刷新所有数据
+            await this.loadAllData()
+          }
         } catch (err) {
           console.error('自动运行失败:', err)
           console.error('Error details:', err.response?.data)

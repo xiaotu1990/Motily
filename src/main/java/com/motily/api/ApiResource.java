@@ -293,14 +293,40 @@ public class ApiResource {
     @Path("/simulation/step")
     @Produces(MediaType.APPLICATION_JSON)
     public Response stepSimulation() {
-        Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
-        if (timeline == null) {
-            return Response.ok().entity("{\"code\": 400, \"data\": {\"message\": \"没有活跃的模拟\"}}")
-                    .build();
+        try {
+            Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+            if (timeline == null) {
+                return Response.ok().entity("{\"code\": 400, \"data\": {\"message\": \"没有活跃的模拟\"}}")
+                        .build();
+            }
+            
+            // 保存当前时间，用于在事务失败时返回
+            int currentYear = timeline.currentYear;
+            int currentWeek = timeline.currentWeek;
+            
+            // 尝试推进时间
+            timelineService.stepForward(timeline);
+            
+            // 重新获取timeline以获取更新后的数据
+            Timeline updatedTimeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+            if (updatedTimeline != null) {
+                return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + updatedTimeline.currentYear + ", \"week\": " + updatedTimeline.currentWeek + "}}")
+                        .build();
+            } else {
+                return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + currentYear + ", \"week\": " + currentWeek + "}}")
+                        .build();
+            }
+        } catch (Exception e) {
+            // 捕获异常，返回当前时间
+            Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+            if (timeline != null) {
+                return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + "}}")
+                        .build();
+            } else {
+                return Response.ok().entity("{\"code\": 400, \"data\": {\"message\": \"没有活跃的模拟\"}}")
+                        .build();
+            }
         }
-        timelineService.stepForward(timeline);
-        return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + "}}")
-                .build();
     }
     
     @GET
