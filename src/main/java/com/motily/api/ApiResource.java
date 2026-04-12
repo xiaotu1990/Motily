@@ -26,6 +26,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Random;
+import com.motily.api.EventDTO;
 
 @Path("/api")
 @ApplicationScoped
@@ -281,10 +282,10 @@ public class ApiResource {
     public Response getCurrentSimulationTime() {
         Timeline timeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
         if (timeline == null) {
-            return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": 2024, \"week\": 1}}")
+            return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": 2024, \"week\": 1, \"simulationId\": null}}")
                     .build();
         }
-        return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + "}}")
+        return Response.ok().entity("{\"code\": 200, \"data\": {\"year\": " + timeline.currentYear + ", \"week\": " + timeline.currentWeek + ", \"simulationId\": " + timeline.id + "}}")
                 .build();
     }
     
@@ -334,8 +335,17 @@ public class ApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSimulationEvents(@QueryParam("simulationId") Long simulationId) {
         List<SocialEvent> events = societyService.listSocialEventsByTimeline(simulationId);
-        return Response.ok().entity("{\"code\": 200, \"data\": " + events + "}")
-                .build();
+        
+        java.util.List<EventDTO> eventDTOs = new java.util.ArrayList<>();
+        for (SocialEvent event : events) {
+            eventDTOs.add(new EventDTO(event));
+        }
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", eventDTOs);
+        
+        return Response.ok(response).build();
     }
     
     // 模拟请求类
@@ -425,8 +435,8 @@ public class ApiResource {
         }
 
         // 缓存未命中，计算并缓存
-        long totalPopulation = humanService.countHumans();
-        Number totalWealthResult = Human.getEntityManager().createQuery("SELECT SUM(h.wealth) FROM Human h", Number.class).getSingleResult();
+        long totalPopulation = Human.count("deathYear is null");
+        Number totalWealthResult = Human.getEntityManager().createQuery("SELECT SUM(h.wealth) FROM Human h WHERE h.deathYear IS NULL", Number.class).getSingleResult();
         double totalWealth = totalWealthResult != null ? totalWealthResult.doubleValue() : 0.0;
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
@@ -458,7 +468,7 @@ public class ApiResource {
         }
 
         // 缓存未命中，计算并缓存
-        List<Human> humans = Human.findAll().list();
+        List<Human> humans = Human.find("deathYear is null").list();
 
         java.util.Map<String, Integer> classCount = new java.util.HashMap<>();
         classCount.put("底层", 0);
@@ -506,7 +516,7 @@ public class ApiResource {
     @Path("/human/distribution/occupation")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getOccupationDistribution() {
-        List<Human> humans = Human.findAll().list();
+        List<Human> humans = Human.find("deathYear is null").list();
 
         java.util.Map<String, Integer> occupationCount = new java.util.HashMap<>();
 
@@ -542,7 +552,7 @@ public class ApiResource {
     @Path("/human/distribution/wealth")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWealthDistribution() {
-        List<Human> humans = Human.findAll().list();
+        List<Human> humans = Human.find("deathYear is null").list();
 
         java.util.Map<String, java.util.Map<String, Object>> wealthRanges = new java.util.LinkedHashMap<>();
         wealthRanges.put("低收入 (0-1 万)", new java.util.HashMap<String, Object>() {{ put("count", 0); put("total", 0.0); }});
@@ -737,7 +747,8 @@ public class ApiResource {
 
     @Transactional
     public int createBatchInTransaction(int count) {
-        int currentYear = java.time.LocalDate.now().getYear();
+        Timeline activeTimeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+        int currentYear = activeTimeline != null ? activeTimeline.currentYear : java.time.LocalDate.now().getYear();
         Random rng = new Random();
         int chunkSize = 2000;
         int totalCreated = 0;
@@ -772,7 +783,7 @@ public class ApiResource {
     @Path("/human/distribution/region")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRegionDistribution() {
-        List<Human> humans = humanService.listHumans(0, 100000);
+        List<Human> humans = Human.find("deathYear is null").list();
 
         java.util.Map<Integer, Integer> regionCount = new java.util.HashMap<>();
 
@@ -845,7 +856,8 @@ public class ApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getDerivedStats() {
         List<Human> allHumans = Human.findAll().list();
-        long totalPopulation = allHumans.size();
+        List<Human> aliveHumans = allHumans.stream().filter(h -> h.deathYear == null).collect(java.util.stream.Collectors.toList());
+        long totalPopulation = aliveHumans.size();
 
         if (totalPopulation == 0) {
             java.util.Map<String, Object> emptyData = new java.util.HashMap<>();
@@ -864,7 +876,8 @@ public class ApiResource {
             return Response.ok(response).build();
         }
 
-        int currentYear = java.time.LocalDate.now().getYear();
+        Timeline activeTimeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
+        int currentYear = activeTimeline != null ? activeTimeline.currentYear : java.time.LocalDate.now().getYear();
         long birthCount = 0;
         long deathCount = 0;
         long marriageCount = 0;
@@ -880,9 +893,8 @@ public class ApiResource {
         ageDistribution.put("36-55", 0);
         ageDistribution.put("56+", 0);
 
-        for (Human h : allHumans) {
+        for (Human h : aliveHumans) {
             if (h.birthYear == currentYear) birthCount++;
-            if (h.deathYear != null && h.deathYear == currentYear) deathCount++;
             if ("married".equals(h.maritalStatus)) marriageCount++;
             totalWealth += h.wealth;
 
@@ -909,20 +921,24 @@ public class ApiResource {
             }
         }
 
+        for (Human h : allHumans) {
+            if (h.deathYear != null && h.deathYear == currentYear) deathCount++;
+        }
+
         double birthRate = birthCount * 1.0 / totalPopulation;
         double deathRate = deathCount * 1.0 / totalPopulation;
 
         long marriageAgeCount = 0;
-        for (Human h : allHumans) {
+        for (Human h : aliveHumans) {
             int age = currentYear - h.birthYear;
-            if (age >= 22 && h.deathYear == null) {
+            if (age >= 22) {
                 marriageAgeCount++;
             }
         }
         double marriageRate = marriageAgeCount > 0 ? marriageCount * 1.0 / marriageAgeCount : 0.0;
 
         java.util.List<double[]> wealthList = new java.util.ArrayList<>();
-        for (Human h : allHumans) {
+        for (Human h : aliveHumans) {
             wealthList.add(new double[]{h.wealth});
         }
         wealthList.sort((a, b) -> Double.compare(a[0], b[0]));
@@ -937,8 +953,7 @@ public class ApiResource {
         double populationGrowthRate = (birthCount - deathCount) * 1.0 / totalPopulation;
 
         long youngCount = 0, workingCount = 0, oldCount = 0;
-        for (Human h : allHumans) {
-            if (h.deathYear != null) continue;
+        for (Human h : aliveHumans) {
             int age = currentYear - h.birthYear;
             if (age < 18) youngCount++;
             else if (age < 65) workingCount++;
@@ -946,11 +961,8 @@ public class ApiResource {
         }
         double dependencyRatio = (workingCount > 0) ? (double)(youngCount + oldCount) / workingCount * 100.0 : 0.0;
 
-        long totalAlive = 0;
         long urbanCount = 0;
-        for (Human h : allHumans) {
-            if (h.deathYear != null) continue;
-            totalAlive++;
+        for (Human h : aliveHumans) {
             if (h.socialClass >= 2) {
                 urbanCount++;
                 continue;
@@ -966,7 +978,7 @@ public class ApiResource {
                 }
             }
         }
-        double urbanizationRate = (totalAlive > 0) ? (double) urbanCount / totalAlive * 100.0 : 0.0;
+        double urbanizationRate = (totalPopulation > 0) ? (double) urbanCount / totalPopulation * 100.0 : 0.0;
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("birthRate", Math.round(birthRate * 10000.0) / 10000.0);

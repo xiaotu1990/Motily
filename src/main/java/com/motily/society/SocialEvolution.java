@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 @ApplicationScoped
 public class SocialEvolution {
@@ -17,6 +18,24 @@ public class SocialEvolution {
     HumanService humanService;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final String[] QUARTERLY_EVENT_TYPES = {
+        "政策调整", "科技突破", "文化事件", "教育改革", "公共卫生",
+        "环境变化", "人口迁移", "社会运动", "法律修订", "外交事件"
+    };
+
+    private static final String[] QUARTERLY_EVENT_DESCS = {
+        "政府出台新的社会保障政策，扩大福利覆盖范围",
+        "重大科技创新成果发布，推动产业升级转型",
+        "大型文化活动举办，促进社会文化交流融合",
+        "教育体系改革方案落地，调整人才培养方向",
+        "公共卫生体系加强建设，提升疾病防控能力",
+        "极端天气频发，环境保护议题引发社会关注",
+        "区域发展不均衡加剧人口流动，城市化进程加快",
+        "民间社会组织活跃，推动社区治理模式创新",
+        "新法律法规正式实施，影响社会生活多个方面",
+        "国际交流合作深化，对外开放水平持续提升"
+    };
     
     public SocialIndicator calculateSocialIndicators(int year) {
         List<Human> humans = humanService.getHumansByYear(year);
@@ -221,5 +240,57 @@ public class SocialEvolution {
         event.probability = probability;
         
         return event;
+    }
+
+    public void generateQuarterlyEvents(int year, int week, Random rng) {
+        List<Human> aliveHumans = Human.find("deathYear is null").list();
+        if (aliveHumans.isEmpty()) {
+            return;
+        }
+
+        int quarter = (week - 1) / 13 + 1;
+
+        int eventIndex = rng.nextInt(QUARTERLY_EVENT_TYPES.length);
+        String eventType = QUARTERLY_EVENT_TYPES[eventIndex];
+        String eventDesc = QUARTERLY_EVENT_DESCS[eventIndex];
+
+        SocialEvent event = new SocialEvent();
+        event.eventYear = year;
+        event.eventType = eventType;
+        event.description = year + "年第" + quarter + "季度：" + eventDesc;
+        event.influenceScore = 20 + rng.nextInt(40);
+        event.probability = 40 + rng.nextInt(50);
+        event.createdAt = LocalDateTime.now();
+        event.persist();
+
+        long lowerCount = aliveHumans.stream().filter(h -> h.socialClass == 1).count();
+        long middleCount = aliveHumans.stream().filter(h -> h.socialClass == 2).count();
+        long upperCount = aliveHumans.stream().filter(h -> h.socialClass == 3).count();
+        long total = aliveHumans.size();
+
+        if (total > 0) {
+            double lowerRatio = (double) lowerCount / total;
+            if (lowerRatio > 0.7 && rng.nextDouble() < 0.3) {
+                SocialEvent inequalityEvent = new SocialEvent();
+                inequalityEvent.eventYear = year;
+                inequalityEvent.eventType = "社会事件";
+                inequalityEvent.description = year + "年第" + quarter + "季度：底层人口占比过高，社会不平等加剧，引发广泛关注";
+                inequalityEvent.influenceScore = 55 + rng.nextInt(25);
+                inequalityEvent.probability = 70 + rng.nextInt(20);
+                inequalityEvent.createdAt = LocalDateTime.now();
+                inequalityEvent.persist();
+            }
+
+            if (middleCount > 0 && rng.nextDouble() < 0.2) {
+                SocialEvent middleEvent = new SocialEvent();
+                middleEvent.eventYear = year;
+                middleEvent.eventType = "经济事件";
+                middleEvent.description = year + "年第" + quarter + "季度：中产阶级规模达" + Math.round((double) middleCount / total * 100) + "%，消费市场持续扩大";
+                middleEvent.influenceScore = 30 + rng.nextInt(20);
+                middleEvent.probability = 50 + rng.nextInt(30);
+                middleEvent.createdAt = LocalDateTime.now();
+                middleEvent.persist();
+            }
+        }
     }
 }

@@ -44,7 +44,6 @@ public class DemographyEngine {
         "雯", "晶", "茜", "蕾", "露", "琪", "宁", "馨", "媛", "菲"
     };
 
-    @Transactional
     public void processWeeklyDemography(int currentYear, int currentWeek, Random rng) {
         List<Human> allHumans = Human.findAll().list();
 
@@ -53,7 +52,6 @@ public class DemographyEngine {
         advancePregnanciesAndDeliver(allHumans, currentYear, currentWeek, rng);
     }
 
-    @Transactional
     protected void processDeaths(List<Human> humans, int currentYear, Random rng) {
         for (Human human : humans) {
             if (human.deathYear != null) {
@@ -72,7 +70,6 @@ public class DemographyEngine {
         }
     }
 
-    @Transactional
     protected void checkPregnancy(List<Human> humans, int currentYear, Random rng) {
         for (Human human : humans) {
             if (!isEligibleForPregnancy(human, currentYear)) {
@@ -100,15 +97,14 @@ public class DemographyEngine {
         if (woman.deathYear != null) {
             return false;
         }
-        if (woman.pregnancyWeeks == null || woman.pregnancyWeeks > 0) {
+        if (woman.pregnancyWeeks != null && woman.pregnancyWeeks > 0) {
             return false;
         }
 
         int age = currentYear - woman.birthYear;
-        return age >= 20 && age <= 42;
+        return age >= 18 && age <= 42;
     }
 
-    @Transactional
     protected void advancePregnanciesAndDeliver(List<Human> humans, int currentYear, int currentWeek, Random rng) {
         for (Human woman : humans) {
             if (woman.gender != 0) {
@@ -129,7 +125,6 @@ public class DemographyEngine {
         }
     }
 
-    @Transactional
     protected void deliverBaby(Human mother, int currentYear, int currentWeek, Random rng) {
         Human father = null;
         if (mother.spouseId != null) {
@@ -207,15 +202,17 @@ public class DemographyEngine {
     }
 
     public double calculateWeeklyPregnancyProbability(int age) {
-        double baseRate = 0.0019;
+        double baseRate = 0.003;
 
         double ageMultiplier;
-        if (age >= 20 && age <= 25) {
-            ageMultiplier = 1.2;
+        if (age >= 18 && age <= 19) {
+            ageMultiplier = 0.8;
+        } else if (age >= 20 && age <= 25) {
+            ageMultiplier = 1.3;
         } else if (age >= 26 && age <= 32) {
-            ageMultiplier = 1.5;
+            ageMultiplier = 1.6;
         } else if (age >= 33 && age <= 37) {
-            ageMultiplier = 1.0;
+            ageMultiplier = 1.1;
         } else if (age >= 38 && age <= 42) {
             ageMultiplier = 0.5;
         } else {

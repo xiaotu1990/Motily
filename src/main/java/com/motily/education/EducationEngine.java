@@ -4,7 +4,6 @@ import com.motily.human.Human;
 import com.motily.human.MemoryService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -20,30 +19,24 @@ public class EducationEngine {
     private static final double[] EDUCATION_RETURN_RATES = {1.0, 1.2, 1.5, 2.0, 2.5};
     private static final int[] EDUCATION_DURATION = {6, 3, 3, 4, 2};
 
-    @Transactional
     public void processWeeklyEducation(int currentYear, int currentWeek, Random rng) {
-        List<Human> humans = Human.findAll().list();
-        
+        List<Human> humans = Human.find("deathYear is null").list();
+
         for (Human human : humans) {
-            if (human.deathYear != null) {
-                continue;
-            }
-            
             int age = currentYear - human.birthYear;
             if (age < 6) {
                 continue;
             }
-            
+
             processEducationForHuman(human, age, currentYear, rng);
         }
     }
 
-    @Transactional
     protected void processEducationForHuman(Human human, int age, int currentYear, Random rng) {
         if (shouldUpgradeEducation(human, age, rng)) {
-            upgradeEducation(human, rng);
+            upgradeEducation(human, currentYear, rng);
         }
-        
+
         processEducationInvestment(human, rng);
         applyEducationReturn(human);
     }
@@ -53,12 +46,12 @@ public class EducationEngine {
         if (currentLevelIndex >= EDUCATION_LEVELS.length - 1) {
             return false;
         }
-        
+
         int nextLevelAge = getNextLevelAge(currentLevelIndex);
         if (age < nextLevelAge) {
             return false;
         }
-        
+
         double upgradeProbability = getUpgradeProbability(human, currentLevelIndex, rng);
         return rng.nextDouble() < upgradeProbability;
     }
@@ -82,39 +75,39 @@ public class EducationEngine {
 
     private double getUpgradeProbability(Human human, int currentLevelIndex, Random rng) {
         double baseProbability = 0.8;
-        
+
         double wealthFactor = Math.min(1.5, human.wealth / 50000.0);
         double socialClassFactor = human.socialClass / 3.0;
         double ageFactor = 1.0;
-        
+
         double probability = baseProbability * wealthFactor * socialClassFactor * ageFactor;
         return Math.min(0.95, probability);
     }
 
-    @Transactional
-    protected void upgradeEducation(Human human, Random rng) {
+    protected void upgradeEducation(Human human, int currentYear, Random rng) {
         int currentLevelIndex = getEducationLevelIndex(human.educationLevel);
         if (currentLevelIndex >= EDUCATION_LEVELS.length - 1) {
             return;
         }
-        
+
         String nextLevel = EDUCATION_LEVELS[currentLevelIndex + 1];
         String currentLevel = human.educationLevel;
         human.educationLevel = nextLevel;
         human.updatedAt = LocalDateTime.now();
         human.persist();
-        
-        // 记录教育经历和记忆
-        int currentYear = java.time.LocalDateTime.now().getYear();
-        String description = "从" + currentLevel + "升级到" + nextLevel;
-        memoryService.formMemory(human, "education", currentYear, description, 2);
+
+        try {
+            String description = "从" + currentLevel + "升级到" + nextLevel;
+            memoryService.formMemory(human, "education", currentYear, description, 2);
+        } catch (Exception e) {
+            System.err.println("记录教育记忆失败: " + e.getMessage());
+        }
     }
 
-    @Transactional
     protected void processEducationInvestment(Human human, Random rng) {
         int levelIndex = getEducationLevelIndex(human.educationLevel);
         double investmentRate = EDUCATION_INVESTMENT_RATES[levelIndex];
-        
+
         double investmentAmount = human.wealth * investmentRate / 52.0;
         if (investmentAmount > 0 && human.wealth > investmentAmount) {
             human.wealth -= investmentAmount;
@@ -123,11 +116,10 @@ public class EducationEngine {
         }
     }
 
-    @Transactional
     protected void applyEducationReturn(Human human) {
         int levelIndex = getEducationLevelIndex(human.educationLevel);
         double returnRate = EDUCATION_RETURN_RATES[levelIndex];
-        
+
         double weeklyReturn = human.wealth * (returnRate - 1.0) / 52.0 / 10.0;
         if (weeklyReturn > 0) {
             human.wealth += weeklyReturn;
@@ -148,7 +140,7 @@ public class EducationEngine {
     public boolean isEligibleForHigherEducation(Human human, int currentYear) {
         int age = currentYear - human.birthYear;
         int currentLevelIndex = getEducationLevelIndex(human.educationLevel);
-        
+
         return age >= 18 && currentLevelIndex < 3;
     }
 

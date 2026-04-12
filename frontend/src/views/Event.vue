@@ -8,24 +8,28 @@
     <table class="table" v-if="events.length > 0">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>事件类型</th>
-          <th>影响程度</th>
-          <th>影响范围</th>
           <th>年份</th>
+          <th>事件类型</th>
+          <th>事件描述</th>
+          <th>影响程度</th>
+          <th>发生概率</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="event in events" :key="event.id">
-          <td>{{ event.id }}</td>
-          <td>{{ event.type }}</td>
+          <td>{{ event.eventYear }}</td>
           <td>
-            <span :class="['impact-badge', 'impact-' + event.impactLevel]">
-              {{ event.impactLevel }}
+            <span :class="['event-type-badge', 'type-' + getEventTypeClass(event.eventType)]">
+              {{ event.eventType }}
             </span>
           </td>
-          <td>{{ event.impactScope }}</td>
-          <td>{{ event.year }}</td>
+          <td class="event-desc">{{ event.description }}</td>
+          <td>
+            <span :class="['impact-badge', getImpactClass(event.influenceScore)]">
+              {{ getImpactLabel(event.influenceScore) }}
+            </span>
+          </td>
+          <td>{{ event.probability }}%</td>
         </tr>
       </tbody>
     </table>
@@ -55,26 +59,52 @@ export default {
       this.loading = true
       this.error = null
       try {
-        const response = await axios.get('/api/event/list')
+        const response = await axios.get('/api/simulation/events')
         this.events = response.data.data || []
       } catch (err) {
         console.error('加载社会事件数据失败:', err)
-        // 加载失败时使用模拟数据
-        this.events = [
-          { id: 1, type: '经济危机', impactLevel: '高', impactScope: '全球', year: 2008 },
-          { id: 2, type: '技术革命', impactLevel: '中', impactScope: '区域', year: 2015 },
-          { id: 3, type: '自然灾害', impactLevel: '高', impactScope: '局部', year: 2020 }
-        ]
-        this.error = '加载真实数据失败，显示模拟数据'
+        this.events = []
+        this.error = '加载社会事件数据失败，请确认模拟已启动'
       } finally {
         this.loading = false
       }
+    },
+    getEventTypeClass(eventType) {
+      if (eventType.includes('出生')) return 'birth'
+      if (eventType.includes('死亡')) return 'death'
+      if (eventType.includes('结婚')) return 'marriage'
+      if (eventType.includes('经济')) return 'economic'
+      return 'social'
+    },
+    getImpactClass(score) {
+      if (score >= 50) return 'impact-high'
+      if (score >= 15) return 'impact-medium'
+      return 'impact-low'
+    },
+    getImpactLabel(score) {
+      if (score >= 50) return '高'
+      if (score >= 15) return '中'
+      return '低'
     }
   }
 }
 </script>
 
 <style scoped>
+.event-type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.type-birth { background-color: #e8f5e8; color: #2e7d32; }
+.type-death { background-color: #ffebee; color: #d32f2f; }
+.type-marriage { background-color: #fce4ec; color: #c2185b; }
+.type-economic { background-color: #fff3e0; color: #f57c00; }
+.type-social { background-color: #e3f2fd; color: #1976d2; }
+
 .impact-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
@@ -83,18 +113,53 @@ export default {
   font-weight: 500;
 }
 
-.impact-高 {
+.impact-high { background-color: #ffebee; color: #d32f2f; }
+.impact-medium { background-color: #fff3e0; color: #f57c00; }
+.impact-low { background-color: #e8f5e8; color: #2e7d32; }
+
+.event-desc {
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+}
+
+.message-error {
   background-color: #ffebee;
   color: #d32f2f;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 
-.impact-中 {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-.impact-低 {
-  background-color: #e8f5e8;
-  color: #2e7d32;
+.message-info {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 </style>

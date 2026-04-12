@@ -35,7 +35,7 @@ public class MarriageEngine {
         boolean bothAlive = h1.deathYear == null && h2.deathYear == null;
         boolean oppositeGender = h1.gender != h2.gender;
         boolean bothSingle = "single".equals(h1.maritalStatus) && "single".equals(h2.maritalStatus);
-        boolean bothAdult = age1 >= 22 && age2 >= 22;
+        boolean bothAdult = age1 >= 18 && age2 >= 18;
         boolean notCloseRelatives = !isCloseRelative(h1, h2);
 
         return bothAlive && oppositeGender && bothSingle && bothAdult && notCloseRelatives;
@@ -55,7 +55,6 @@ public class MarriageEngine {
         return false;
     }
 
-    @Transactional
     public Marriage performMarriage(Human husband, Human wife, int year, int week) {
         Marriage marriage = new Marriage();
         marriage.husbandId = husband.id;
@@ -86,7 +85,6 @@ public class MarriageEngine {
         return marriage;
     }
 
-    @Transactional
     public void processWeeklyMarriages(int currentYear, int currentWeek) {
         List<Human> eligibleMen = getEligibleMen(currentYear);
         List<Human> eligibleWomen = getEligibleWomen(currentYear);
@@ -116,7 +114,7 @@ public class MarriageEngine {
     private List<Human> getEligibleMen(int currentYear) {
         return Human.find(
             "gender = 1 and maritalStatus = 'single' and deathYear is null and birthYear <= ?1 and birthYear >= ?2",
-            currentYear - 22,
+            currentYear - 18,
             currentYear - 50
         ).list();
     }
@@ -124,7 +122,7 @@ public class MarriageEngine {
     private List<Human> getEligibleWomen(int currentYear) {
         return Human.find(
             "gender = 0 and maritalStatus = 'single' and deathYear is null and birthYear <= ?1 and birthYear >= ?2",
-            currentYear - 20,
+            currentYear - 18,
             currentYear - 45
         ).list();
     }
@@ -175,13 +173,15 @@ public class MarriageEngine {
     public double calculateMarriageProbability(Human human, int currentYear) {
         int age = currentYear - human.birthYear;
 
-        if (age < 22 || age > 50) {
+        if (age < 18 || age > 50) {
             return 0;
         }
 
         double baseProbability;
-        if (age >= 25 && age <= 35) {
+        if (age >= 22 && age <= 35) {
             baseProbability = 0.003;
+        } else if (age >= 18) {
+            baseProbability = 0.002;
         } else {
             baseProbability = 0.0015;
         }

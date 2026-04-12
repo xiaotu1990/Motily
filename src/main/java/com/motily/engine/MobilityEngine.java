@@ -6,7 +6,6 @@ import com.motily.human.MemoryService;
 import com.motily.society.SocialEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Random;
 
@@ -14,7 +13,7 @@ import java.util.Random;
 public class MobilityEngine {
     @Inject
     HumanService humanService;
-    
+
     @Inject
     MemoryService memoryService;
 
@@ -39,7 +38,6 @@ public class MobilityEngine {
     private static final double PRIME_AGE_MULTIPLIER = 1.3;
     private static final double NON_PRIME_AGE_MULTIPLIER = 0.7;
 
-    @Transactional
     public void processWeeklyMobility(int currentYear) {
         List<Human> livingHumans = Human.find("deathYear is null").list();
 
@@ -77,12 +75,11 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 2;
                 human.persist();
-                
-                // 记录社会阶层变化经历和记忆
+
                 String[] classNames = {"", "底层", "中层", "上层"};
                 String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[2];
-                memoryService.formMemory(human, "social", currentYear, description, 2);
-                
+                safeFormMemory(human, "social", currentYear, description, 2);
+
                 recordMobilityEvent(human, fromClass, 2, currentYear);
             }
         }
@@ -97,12 +94,11 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 1;
                 human.persist();
-                
-                // 记录社会阶层变化经历和记忆
+
                 String[] classNames = {"", "底层", "中层", "上层"};
                 String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[1];
-                memoryService.formMemory(human, "social", currentYear, description, 2);
-                
+                safeFormMemory(human, "social", currentYear, description, 2);
+
                 recordMobilityEvent(human, fromClass, 1, currentYear);
                 return;
             }
@@ -113,12 +109,11 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 3;
                 human.persist();
-                
-                // 记录社会阶层变化经历和记忆
+
                 String[] classNames = {"", "底层", "中层", "上层"};
                 String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[3];
-                memoryService.formMemory(human, "social", currentYear, description, 3);
-                
+                safeFormMemory(human, "social", currentYear, description, 3);
+
                 recordMobilityEvent(human, fromClass, 3, currentYear);
             }
         }
@@ -133,12 +128,11 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 2;
                 human.persist();
-                
-                // 记录社会阶层变化经历和记忆
+
                 String[] classNames = {"", "底层", "中层", "上层"};
                 String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[2];
-                memoryService.formMemory(human, "social", currentYear, description, 2);
-                
+                safeFormMemory(human, "social", currentYear, description, 2);
+
                 recordMobilityEvent(human, fromClass, 2, currentYear);
                 return;
             }
@@ -149,14 +143,21 @@ public class MobilityEngine {
                 int fromClass = human.socialClass;
                 human.socialClass = 1;
                 human.persist();
-                
-                // 记录社会阶层变化经历和记忆
+
                 String[] classNames = {"", "底层", "中层", "上层"};
                 String description = "从" + classNames[fromClass] + "跃升/滑落至" + classNames[1];
-                memoryService.formMemory(human, "social", currentYear, description, 3);
-                
+                safeFormMemory(human, "social", currentYear, description, 3);
+
                 recordMobilityEvent(human, fromClass, 1, currentYear);
             }
+        }
+    }
+
+    private void safeFormMemory(Human human, String type, int year, String desc, int level) {
+        try {
+            memoryService.formMemory(human, type, year, desc, level);
+        } catch (Exception e) {
+            System.err.println("记录流动记忆失败: " + e.getMessage());
         }
     }
 

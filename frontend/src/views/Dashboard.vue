@@ -384,7 +384,7 @@ export default {
       batchCreating: false,
       derivedStats: null,
       regionData: { distribution: [], total: 0 },
-      simulationTime: { year: 2024, week: 1 },
+      simulationTime: { year: 2024, week: 1, simulationId: null },
 
       charts: {},
       chartColors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe']
@@ -441,7 +441,8 @@ export default {
           trendRes,
           derivedStatsRes,
           regionRes,
-          simulationTimeRes
+          simulationTimeRes,
+          eventsRes
         ] = await Promise.all([
           axios.get('/api/human/stats'),
           axios.get('/api/human/distribution/social-class'),
@@ -450,7 +451,8 @@ export default {
           axios.get('/api/indicator/trend', { params: { startYear: 2000, endYear: new Date().getFullYear() } }),
           axios.get('/api/human/derived-stats'),
           axios.get('/api/human/distribution/region'),
-          axios.get('/api/simulation/time')
+          axios.get('/api/simulation/time'),
+          axios.get('/api/simulation/events')
         ])
 
         const humanStats = humanStatsRes.data?.data || {}
@@ -470,14 +472,30 @@ export default {
         this.regionData = regionRes.data?.data || { distribution: [], total: 0 }
 
         // 更新模拟时间
-        const simulationTimeData = simulationTimeRes.data?.data || { year: 2024, week: 1 }
+        const simulationTimeData = simulationTimeRes.data?.data || { year: 2024, week: 1, simulationId: null }
         this.updateSimulationTime(simulationTimeData)
+
+        // 处理事件数据
+        const eventsData = eventsRes.data?.data || []
+        this.recentEvents = eventsData.map(event => {
+          let type = 'social'
+          if (event.eventType.includes('出生')) type = 'birth'
+          else if (event.eventType.includes('死亡')) type = 'death'
+          else if (event.eventType.includes('结婚')) type = 'marriage'
+          else if (event.eventType.includes('经济')) type = 'economic'
+          return {
+            type,
+            title: event.description,
+            time: event.createdAt
+          }
+        }).slice(0, 12) // 只取最近的12个事件
 
         this.calculateStability()
 
         this.trendData = Array.isArray(trendRes.data?.data) ? trendRes.data.data : []
         this.calculateTrends()
-        this.generateMockEvents()
+        // 不再使用模拟事件，使用真实事件
+        // this.generateMockEvents()
 
         this.lastUpdateTime = new Date().toLocaleTimeString('zh-CN')
         this.initialLoaded = true
@@ -520,7 +538,7 @@ export default {
     async fetchSimulationTime() {
       try {
         const response = await axios.get('/api/simulation/time')
-        const simulationTimeData = response.data?.data || { year: 2024, week: 1 }
+        const simulationTimeData = response.data?.data || { year: 2024, week: 1, simulationId: null }
         this.updateSimulationTime(simulationTimeData)
       } catch (err) {
         console.error('获取模拟时间失败:', err)

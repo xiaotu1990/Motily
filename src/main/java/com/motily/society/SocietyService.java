@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 @ApplicationScoped
 public class SocietyService {
@@ -55,9 +56,12 @@ public class SocietyService {
     public void evolveSociety(int year, String theme) {
         socialEvolution.evolveSociety(year, theme);
     }
+
+    public void generateQuarterlyEvents(int year, int week, Random rng) {
+        socialEvolution.generateQuarterlyEvents(year, week, rng);
+    }
     
     public List<SocialEvent> listSocialEventsByTimeline(Long timelineId) {
-        // 这里需要根据时间轴ID查询社会事件，暂时返回所有事件
-        return SocialEvent.findAll().list();
+        return SocialEvent.find("ORDER BY createdAt DESC").range(0, 49).list();
     }
 }

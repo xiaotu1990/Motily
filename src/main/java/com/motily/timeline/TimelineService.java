@@ -159,6 +159,11 @@ public class TimelineService {
                 societyService.evolveSociety(currentYear, "normal");
             }
 
+            if (currentWeek % 13 == 0) {
+                System.out.println("处理季度社会事件...");
+                societyService.generateQuarterlyEvents(currentYear, currentWeek, rng);
+            }
+
             // 暂时禁用记忆衰减处理，以提高性能
             // java.util.List<com.motily.human.Human> humans = com.motily.human.Human.findAll().list();
             // for (com.motily.human.Human human : humans) {
@@ -213,7 +218,8 @@ public class TimelineService {
     }
     
     public void runSimulation(Timeline timeline, int years, String theme) {
-        for (int i = 0; i < years; i++) {
+        int totalWeeks = years * 52;
+        for (int i = 0; i < totalWeeks; i++) {
             stepForward(timeline, theme);
         }
     }

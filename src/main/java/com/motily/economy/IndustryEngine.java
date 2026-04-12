@@ -2,7 +2,6 @@ package com.motily.economy;
 
 import com.motily.human.Human;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -19,14 +18,12 @@ public class IndustryEngine {
     private int[] industryCycles = new int[INDUSTRIES.length];
 
     public IndustryEngine() {
-        // 初始化行业增长率和周期
         for (int i = 0; i < INDUSTRIES.length; i++) {
             industryGrowthRates[i] = BASE_GROWTH_RATES[i];
             industryCycles[i] = 0;
         }
     }
 
-    @Transactional
     public void processWeeklyIndustry(int currentYear, int currentWeek, Random rng) {
         updateIndustryCycles(rng);
         updateIndustryGrowthRates();
@@ -51,57 +48,46 @@ public class IndustryEngine {
         return 0.8 + 0.4 * Math.sin(phase);
     }
 
-    @Transactional
     protected void applyIndustryEffects(int currentYear, Random rng) {
-        List<Human> humans = Human.findAll().list();
-        
+        List<Human> humans = Human.find("deathYear is null AND industry IS NOT NULL").list();
+
         for (Human human : humans) {
-            if (human.deathYear != null || human.industry == null) {
-                continue;
-            }
-            
             applyIndustryEffectToHuman(human, currentYear, rng);
         }
     }
 
-    @Transactional
     protected void applyIndustryEffectToHuman(Human human, int currentYear, Random rng) {
         int industryIndex = getIndustryIndex(human.industry);
         if (industryIndex == -1) {
             return;
         }
-        
+
         double growthRate = industryGrowthRates[industryIndex];
         double weeklyGrowth = growthRate / 52.0;
-        
-        // 行业增长影响收入
+
         double incomeEffect = human.wealth * weeklyGrowth * 0.1;
         if (incomeEffect > 0) {
             human.wealth += incomeEffect;
             human.updatedAt = LocalDateTime.now();
             human.persist();
         }
-        
-        // 行业兴衰影响职业前景
+
         if (rng.nextDouble() < 0.01) {
             updateOccupationBasedOnIndustry(human, industryIndex, rng);
         }
     }
 
-    @Transactional
     protected void updateOccupationBasedOnIndustry(Human human, int industryIndex, Random rng) {
         String industry = INDUSTRIES[industryIndex];
         double growthRate = industryGrowthRates[industryIndex];
-        
+
         if (growthRate > 0.1) {
-            // 行业繁荣，可能升职
             if (rng.nextDouble() < 0.3) {
                 human.socialClass = Math.min(3, human.socialClass + 1);
                 human.updatedAt = LocalDateTime.now();
                 human.persist();
             }
         } else if (growthRate < 0.03) {
-            // 行业衰退，可能降职或失业
             if (rng.nextDouble() < 0.2) {
                 human.socialClass = Math.max(1, human.socialClass - 1);
                 if (rng.nextDouble() < 0.1) {
@@ -143,28 +129,28 @@ public class IndustryEngine {
     public String getPromisingIndustry(Random rng) {
         double maxGrowthRate = -1;
         int bestIndustryIndex = 0;
-        
+
         for (int i = 0; i < INDUSTRIES.length; i++) {
             if (industryGrowthRates[i] > maxGrowthRate) {
                 maxGrowthRate = industryGrowthRates[i];
                 bestIndustryIndex = i;
             }
         }
-        
+
         return INDUSTRIES[bestIndustryIndex];
     }
 
     public String getDecliningIndustry(Random rng) {
         double minGrowthRate = Double.MAX_VALUE;
         int worstIndustryIndex = 0;
-        
+
         for (int i = 0; i < INDUSTRIES.length; i++) {
             if (industryGrowthRates[i] < minGrowthRate) {
                 minGrowthRate = industryGrowthRates[i];
                 worstIndustryIndex = i;
             }
         }
-        
+
         return INDUSTRIES[worstIndustryIndex];
     }
 
@@ -172,10 +158,10 @@ public class IndustryEngine {
         if (industry == null || occupation == null) {
             return 0.5;
         }
-        
+
         String lowerIndustry = industry.toLowerCase();
         String lowerOccupation = occupation.toLowerCase();
-        
+
         if (lowerIndustry.contains("科技") && (lowerOccupation.contains("程序员") || lowerOccupation.contains("工程师"))) {
             return 0.9;
         } else if (lowerIndustry.contains("金融") && (lowerOccupation.contains("银行") || lowerOccupation.contains("投资"))) {
