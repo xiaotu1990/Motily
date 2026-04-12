@@ -13,6 +13,7 @@ import com.motily.society.SocialNetworkEngine;
 import com.motily.simulation.PolicyEngine;
 import com.motily.region.RegionService;
 import com.motily.human.HumanService;
+import com.motily.human.Human;
 import com.motily.human.MemoryService;
 import com.motily.society.SocietyService;
 import com.motily.cache.StatsCacheService;
@@ -114,77 +115,46 @@ public class TimelineService {
             currentYear++;
         }
 
-        try {
-            // 处理各种引擎逻辑
-            System.out.println("开始处理引擎逻辑，当前时间: " + currentYear + "年" + currentWeek + "周");
-            
-            System.out.println("处理人口引擎...");
-            demographyEngine.processWeeklyDemography(currentYear, currentWeek, rng);
-            
-            System.out.println("处理婚姻引擎...");
-            marriageEngine.processWeeklyMarriages(currentYear, currentWeek);
-            
-            System.out.println("处理健康引擎...");
-            healthEngine.processWeeklyHealth(currentYear, currentWeek, rng);
-            
-            System.out.println("处理教育引擎...");
-            educationEngine.processWeeklyEducation(currentYear, currentWeek, rng);
-            
-            System.out.println("处理社交网络引擎...");
-            socialNetworkEngine.processWeeklyNetwork(currentYear, currentWeek, rng);
-            
-            System.out.println("处理 mobility 引擎...");
-            mobilityEngine.processWeeklyMobility(currentYear);
-            
-            System.out.println("处理工业引擎...");
-            industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng);
-            
-            System.out.println("处理投资引擎...");
-            investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng);
-            
-            System.out.println("处理经济引擎...");
-            economicEngine.processWeeklyEconomy(currentYear, currentWeek);
-            
-            System.out.println("处理区域服务...");
-            regionService.updateRegionalFactors(rng);
-            
-            System.out.println("处理信仰引擎...");
-            beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng);
-            
-            System.out.println("处理政策引擎...");
-            policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng);
+        System.out.println("开始处理引擎逻辑，当前时间: " + currentYear + "年" + currentWeek + "周");
 
-            if (currentWeek == 1) {
-                System.out.println("处理社会演化...");
-                societyService.evolveSociety(currentYear, "normal");
-            }
+        runEngine("人口引擎", () -> demographyEngine.processWeeklyDemography(currentYear, currentWeek, rng));
+        runEngine("婚姻引擎", () -> marriageEngine.processWeeklyMarriages(currentYear, currentWeek));
+        runEngine("健康引擎", () -> healthEngine.processWeeklyHealth(currentYear, currentWeek, rng));
+        runEngine("教育引擎", () -> educationEngine.processWeeklyEducation(currentYear, currentWeek, rng));
+        runEngine("社交网络引擎", () -> socialNetworkEngine.processWeeklyNetwork(currentYear, currentWeek, rng));
+        runEngine("流动引擎", () -> mobilityEngine.processWeeklyMobility(currentYear));
+        runEngine("工业引擎", () -> industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng));
+        runEngine("投资引擎", () -> investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng));
+        runEngine("经济引擎", () -> economicEngine.processWeeklyEconomy(currentYear, currentWeek));
+        runEngine("区域服务", () -> regionService.updateRegionalFactors(rng));
+        runEngine("信仰引擎", () -> beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng));
+        runEngine("政策引擎", () -> policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng));
 
-            if (currentWeek % 13 == 0) {
-                System.out.println("处理季度社会事件...");
-                societyService.generateQuarterlyEvents(currentYear, currentWeek, rng);
-            }
-
-            // 暂时禁用记忆衰减处理，以提高性能
-            // java.util.List<com.motily.human.Human> humans = com.motily.human.Human.findAll().list();
-            // for (com.motily.human.Human human : humans) {
-            //     memoryService.decayMemories(human);
-            // }
-            
-            System.out.println("引擎逻辑处理完成");
-        } catch (Exception e) {
-            // 捕获异常，确保时间更新仍然能执行
-            System.err.println("处理引擎逻辑时发生错误: " + e.getMessage());
-            e.printStackTrace();
+        if (currentWeek == 1) {
+            runEngine("社会演化", () -> societyService.evolveSociety(currentYear, "normal"));
         }
 
-        // 无论引擎逻辑是否成功，都更新时间
+        if (currentWeek % 13 == 0) {
+            runEngine("季度事件", () -> societyService.generateQuarterlyEvents(currentYear, currentWeek, rng));
+        }
+
         managedTimeline.currentYear = currentYear;
         managedTimeline.currentWeek = currentWeek;
         managedTimeline.stepCount++;
         managedTimeline.updatedAt = LocalDateTime.now();
-        
-        // 清除统计数据缓存，确保前端获取到最新的数据
+
         statsCacheService.clearAllStats();
+
+        System.out.println("引擎逻辑处理完成，存活人口: " + Human.count("deathYear is null"));
+    }
+
+    private void runEngine(String name, Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            System.err.println(name + "执行失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     @Transactional

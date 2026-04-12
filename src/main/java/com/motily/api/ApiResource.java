@@ -925,8 +925,8 @@ public class ApiResource {
             if (h.deathYear != null && h.deathYear == currentYear) deathCount++;
         }
 
-        double birthRate = birthCount * 1.0 / totalPopulation;
-        double deathRate = deathCount * 1.0 / totalPopulation;
+        double birthRate = totalPopulation > 0 ? birthCount * 1000.0 / totalPopulation : 0.0;
+        double deathRate = totalPopulation > 0 ? deathCount * 1000.0 / totalPopulation : 0.0;
 
         long marriageAgeCount = 0;
         for (Human h : aliveHumans) {
@@ -950,7 +950,7 @@ public class ApiResource {
         avgWealthByClass.put("middle", classCount.containsKey(2) ? classWealthSum.get(2) * 1.0 / classCount.get(2) : 0.0);
         avgWealthByClass.put("upper", classCount.containsKey(3) ? classWealthSum.get(3) * 1.0 / classCount.get(3) : 0.0);
 
-        double populationGrowthRate = (birthCount - deathCount) * 1.0 / totalPopulation;
+        double populationGrowthRate = totalPopulation > 0 ? (birthCount - deathCount) * 1000.0 / totalPopulation : 0.0;
 
         long youngCount = 0, workingCount = 0, oldCount = 0;
         for (Human h : aliveHumans) {

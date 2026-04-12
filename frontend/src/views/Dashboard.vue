@@ -568,8 +568,8 @@ export default {
           this.stats.maleRatio = derivedStats.maleRatio
           this.stats.femaleRatio = derivedStats.femaleRatio || (100 - derivedStats.maleRatio)
         }
-        this.stats.birthRate = derivedStats.birthRate || this.stats.birthRate
-        this.stats.deathRate = derivedStats.deathRate || this.stats.deathRate
+        this.stats.birthRate = derivedStats.birthRate !== undefined ? derivedStats.birthRate : this.stats.birthRate
+        this.stats.deathRate = derivedStats.deathRate !== undefined ? derivedStats.deathRate : this.stats.deathRate
         this.stats.giniIndex = derivedStats.giniCoefficient !== undefined ? derivedStats.giniCoefficient : this.stats.giniIndex
         this.stats.avgAge = derivedStats.ageDistribution ? this.calculateAvgAge(derivedStats.ageDistribution) : this.stats.avgAge
         this.stats.medianAge = this.stats.avgAge > 0 ? Math.max(0, this.stats.avgAge - 2) : 0

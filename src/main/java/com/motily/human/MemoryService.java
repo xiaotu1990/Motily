@@ -1,7 +1,6 @@
 package com.motily.human;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.HashMap;
 @ApplicationScoped
 public class MemoryService {
     // 形成记忆
-    @Transactional
     public void formMemory(Human human, String eventType, int year, String description, int impactLevel) {
         // 创建经历记录
         HumanExperience experience = new HumanExperience();
@@ -98,7 +96,6 @@ public class MemoryService {
     }
     
     // 记忆衰减
-    @Transactional
     public void decayMemories(Human human) {
         List<HumanMemory> memories = HumanMemory.find("human.id = ?1", human.id).list();
         for (HumanMemory memory : memories) {

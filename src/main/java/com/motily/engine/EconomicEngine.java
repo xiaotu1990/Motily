@@ -1,12 +1,8 @@
 package com.motily.engine;
 
 import com.motily.human.Human;
-import com.motily.human.HumanLifecycle;
-import com.motily.human.HumanService;
 import com.motily.society.SocialEvent;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -14,125 +10,153 @@ import java.util.Random;
 @ApplicationScoped
 public class EconomicEngine {
 
-    private static final int WEEKS_PER_YEAR = 52;
-    private static final int CYCLE_YEARS = 12;
-    private static final int TOTAL_CYCLE_WEEKS = CYCLE_YEARS * WEEKS_PER_YEAR;
-    private static final double MIN_WEALTH = 100.0;
-    private static final double RANDOM_FLUCTUATION_RANGE = 0.001;
+    private double gdpGrowthRate = 0.065;
+    private double inflationRate = 0.025;
+    private double unemploymentRate = 0.05;
+    private int economicCycle = 0;
 
-    @Inject
-    HumanService humanService;
+    public void processWeeklyEconomy(int currentYear, int currentWeek, Random rng) {
+        updateEconomicIndicators(rng);
+        applyEconomicEffects(currentYear, rng);
+    }
 
-    @Inject
-    HumanLifecycle humanLifecycle;
+    protected void updateEconomicIndicators(Random rng) {
+        economicCycle = (economicCycle + 1) % 520;
 
-    private Random random = new Random();
+        double cycleFactor = Math.sin(economicCycle / 520.0 * 2 * Math.PI);
 
-    @Transactional
-    public void processWeeklyEconomy(int currentYear, int currentWeek) {
-        int totalWeek = currentYear * WEEKS_PER_YEAR + currentWeek;
-        String phase = getEconomicPhase(totalWeek);
+        gdpGrowthRate = 0.065 + cycleFactor * 0.03 + (rng.nextDouble() * 0.01 - 0.005);
+        inflationRate = 0.025 + cycleFactor * 0.015 + (rng.nextDouble() * 0.005 - 0.0025);
+        unemploymentRate = 0.05 - cycleFactor * 0.02 + (rng.nextDouble() * 0.005 - 0.0025);
 
-        List<Human> humans = humanService.getHumansByYear(currentYear);
+        gdpGrowthRate = Math.max(-0.05, Math.min(0.15, gdpGrowthRate));
+        inflationRate = Math.max(0.0, Math.min(0.1, inflationRate));
+        unemploymentRate = Math.max(0.01, Math.min(0.2, unemploymentRate));
+    }
+
+    protected void applyEconomicEffects(int currentYear, Random rng) {
+        List<Human> humans = Human.find("deathYear is null").list();
 
         for (Human human : humans) {
-            if (!humanLifecycle.isAlive(human, currentYear)) {
-                continue;
-            }
+            applyIncomeEffect(human);
+            applyInflationEffect(human);
+            applyUnemploymentEffect(human, rng);
+        }
+    }
 
-            double oldWealth = human.wealth;
-
-            double annualRate = getPhaseGrowthRate(human.socialClass, phase);
-            double weeklyRate = annualRate / WEEKS_PER_YEAR;
-            double fluctuation = (random.nextDouble() * 2 - 1) * RANDOM_FLUCTUATION_RANGE;
-            double actualWeeklyRate = weeklyRate + fluctuation;
-
-            double wealthChange = human.wealth * actualWeeklyRate;
-            human.wealth += wealthChange;
-
-            if (human.wealth < MIN_WEALTH) {
-                human.wealth = MIN_WEALTH;
-            }
-
+    protected void applyIncomeEffect(Human human) {
+        double weeklyIncome = calculateWeeklyIncome(human);
+        if (weeklyIncome > 0) {
+            human.wealth += weeklyIncome;
             human.updatedAt = LocalDateTime.now();
             human.persist();
-
-            recordEconomicEvent(human, oldWealth, human.wealth, phase, currentYear);
         }
     }
 
-    public String getEconomicPhase(int totalWeek) {
-        int positionInCycle = totalWeek % TOTAL_CYCLE_WEEKS;
-        int phaseLength = TOTAL_CYCLE_WEEKS / 5;
+    private double calculateWeeklyIncome(Human human) {
+        double baseIncome = getBaseIncomeByClass(human.socialClass);
+        double gdpEffect = 1.0 + gdpGrowthRate / 52.0;
+        return baseIncome * gdpEffect;
+    }
 
-        if (positionInCycle < phaseLength) {
-            return "prosperity";
-        } else if (positionInCycle < phaseLength * 2) {
-            return "overheat";
-        } else if (positionInCycle < phaseLength * 3) {
-            return "recession";
-        } else if (positionInCycle < phaseLength * 4) {
-            return "depression";
+    private double getBaseIncomeByClass(int socialClass) {
+        switch (socialClass) {
+            case 1: return 200.0;
+            case 2: return 800.0;
+            case 3: return 3000.0;
+            default: return 300.0;
+        }
+    }
+
+    protected void applyInflationEffect(Human human) {
+        double weeklyInflation = inflationRate / 52.0;
+        double purchasingPowerLoss = human.wealth * weeklyInflation * 0.5;
+        if (purchasingPowerLoss > 0) {
+            human.wealth -= purchasingPowerLoss;
+            human.updatedAt = LocalDateTime.now();
+            human.persist();
+        }
+    }
+
+    protected void applyUnemploymentEffect(Human human, Random rng) {
+        if (rng.nextDouble() < unemploymentRate / 52.0) {
+            if (human.occupation != null && rng.nextDouble() < 0.01) {
+                String oldOccupation = human.occupation;
+                human.occupation = null;
+                human.updatedAt = LocalDateTime.now();
+                human.persist();
+            }
+        } else if (human.occupation == null && rng.nextDouble() < 0.05) {
+            human.occupation = "临时工";
+            human.updatedAt = LocalDateTime.now();
+            human.persist();
+        }
+    }
+
+    public double getGdpGrowthRate() {
+        return gdpGrowthRate;
+    }
+
+    public double getInflationRate() {
+        return inflationRate;
+    }
+
+    public double getUnemploymentRate() {
+        return unemploymentRate;
+    }
+
+    public String getEconomicPhase() {
+        if (gdpGrowthRate > 0.08) {
+            return "繁荣";
+        } else if (gdpGrowthRate > 0.05) {
+            return "增长";
+        } else if (gdpGrowthRate > 0.02) {
+            return "稳定";
+        } else if (gdpGrowthRate > 0) {
+            return "放缓";
         } else {
-            return "recovery";
+            return "衰退";
         }
     }
 
-    public double getPhaseGrowthRate(int socialClass, String phase) {
-        switch (phase) {
-            case "prosperity":
-                switch (socialClass) {
-                    case 1: return 0.02;
-                    case 2: return 0.05;
-                    case 3: return 0.08;
-                    default: return 0.03;
-                }
-            case "overheat":
-                switch (socialClass) {
-                    case 1: return -0.01;
-                    case 2: return 0.03;
-                    case 3: return 0.10;
-                    default: return 0.02;
-                }
-            case "recession":
-                switch (socialClass) {
-                    case 1: return -0.12;
-                    case 2: return -0.08;
-                    case 3: return -0.05;
-                    default: return -0.08;
-                }
-            case "depression":
-                switch (socialClass) {
-                    case 1: return -0.20;
-                    case 2: return -0.15;
-                    case 3: return -0.08;
-                    default: return -0.15;
-                }
-            case "recovery":
-                switch (socialClass) {
-                    case 1: return 0.03;
-                    case 2: return 0.04;
-                    case 3: return 0.03;
-                    default: return 0.03;
-                }
-            default:
-                return 0.03;
-        }
-    }
-
-    private void recordEconomicEvent(Human human, double oldWealth, double newWealth, String phase, int year) {
-        double changePercent = Math.abs(newWealth - oldWealth) / Math.max(oldWealth, 1.0);
-        if (changePercent < 0.30) return;
+    public void applyEconomicShock(double shockMagnitude, int currentYear) {
+        gdpGrowthRate -= shockMagnitude;
+        unemploymentRate += shockMagnitude * 2;
 
         SocialEvent event = new SocialEvent();
-        event.eventYear = year;
-        event.eventType = "经济变化";
-        String direction = newWealth > oldWealth ? "增长" : "缩水";
-        event.description = human.name + "财富" + direction + String.format("%.1f%%", changePercent * 100)
-                + "（" + phase + "期），现¥" + String.format("%,.0f", newWealth);
-        event.influenceScore = (int)(changePercent * 50);
-        event.probability = 100;
-        event.createdAt = java.time.LocalDateTime.now();
+        event.eventYear = currentYear;
+        event.eventType = "经济事件";
+        event.description = "经济冲击：GDP增速下降" + String.format("%.1f", shockMagnitude * 100) + "%，失业率上升至" + String.format("%.1f", unemploymentRate * 100) + "%";
+        event.influenceScore = (int) (shockMagnitude * 100);
+        event.probability = 80;
+        event.createdAt = LocalDateTime.now();
         event.persist();
+    }
+
+    public double calculateWealthTax(double wealth) {
+        if (wealth > 1000000) {
+            return wealth * 0.03;
+        } else if (wealth > 500000) {
+            return wealth * 0.02;
+        } else if (wealth > 200000) {
+            return wealth * 0.01;
+        } else {
+            return 0;
+        }
+    }
+
+    public double calculateSocialWelfare(int socialClass, int age) {
+        if (socialClass == 1) {
+            if (age > 65) {
+                return 1500.0;
+            } else if (age < 18) {
+                return 500.0;
+            } else {
+                return 800.0;
+            }
+        } else if (socialClass == 2 && age > 65) {
+            return 1000.0;
+        }
+        return 0;
     }
 }

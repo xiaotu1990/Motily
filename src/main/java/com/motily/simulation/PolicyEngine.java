@@ -2,7 +2,6 @@ package com.motily.simulation;
 
 import com.motily.human.Human;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -14,13 +13,11 @@ public class PolicyEngine {
     private double[] policyEffects = new double[POLICY_TYPES.length];
 
     public PolicyEngine() {
-        // 初始化政策效果
         for (int i = 0; i < POLICY_TYPES.length; i++) {
             policyEffects[i] = 0.0;
         }
     }
 
-    @Transactional
     public void processWeeklyPolicy(int currentYear, int currentWeek, Random rng) {
         updatePolicyEffects(rng);
         applyPolicyEffects(currentYear);
@@ -29,29 +26,23 @@ public class PolicyEngine {
     protected void updatePolicyEffects(Random rng) {
         for (int i = 0; i < POLICY_TYPES.length; i++) {
             if (rng.nextDouble() < 0.01) {
-                policyEffects[i] = (rng.nextDouble() * 0.2 - 0.1); // -0.1 到 0.1
+                policyEffects[i] = (rng.nextDouble() * 0.2 - 0.1);
             }
         }
     }
 
-    @Transactional
     protected void applyPolicyEffects(int currentYear) {
-        List<Human> humans = Human.findAll().list();
-        
+        List<Human> humans = Human.find("deathYear is null").list();
+
         for (Human human : humans) {
-            if (human.deathYear != null) {
-                continue;
-            }
-            
             applyTaxPolicy(human);
-            applyEducationPolicy(human);
+            applyEducationPolicy(human, currentYear);
             applyHealthcarePolicy(human);
-            applySocialSecurityPolicy(human);
+            applySocialSecurityPolicy(human, currentYear);
             applyEmploymentPolicy(human);
         }
     }
 
-    @Transactional
     protected void applyTaxPolicy(Human human) {
         double taxRate = calculateTaxRate(human.wealth);
         double taxAmount = human.wealth * taxRate / 52.0;
@@ -76,9 +67,8 @@ public class PolicyEngine {
         }
     }
 
-    @Transactional
-    protected void applyEducationPolicy(Human human) {
-        int age = 2026 - human.birthYear;
+    protected void applyEducationPolicy(Human human, int currentYear) {
+        int age = currentYear - human.birthYear;
         if (age >= 6 && age <= 18) {
             double educationSubsidy = 100.0;
             human.wealth += educationSubsidy / 52.0;
@@ -87,7 +77,6 @@ public class PolicyEngine {
         }
     }
 
-    @Transactional
     protected void applyHealthcarePolicy(Human human) {
         if (human.healthStatus.equals("疾病") || human.healthStatus.equals("重疾")) {
             double healthcareSubsidy = human.wealth * 0.01;
@@ -97,9 +86,8 @@ public class PolicyEngine {
         }
     }
 
-    @Transactional
-    protected void applySocialSecurityPolicy(Human human) {
-        int age = 2026 - human.birthYear;
+    protected void applySocialSecurityPolicy(Human human, int currentYear) {
+        int age = currentYear - human.birthYear;
         if (age >= 65) {
             double pension = 2000.0;
             human.wealth += pension / 52.0;
@@ -108,7 +96,6 @@ public class PolicyEngine {
         }
     }
 
-    @Transactional
     protected void applyEmploymentPolicy(Human human) {
         if (human.occupation == null) {
             double unemploymentBenefit = 1000.0;
@@ -142,14 +129,14 @@ public class PolicyEngine {
     public String getMostEffectivePolicy() {
         double maxEffect = -1;
         int bestPolicyIndex = 0;
-        
+
         for (int i = 0; i < POLICY_TYPES.length; i++) {
             if (Math.abs(policyEffects[i]) > maxEffect) {
                 maxEffect = Math.abs(policyEffects[i]);
                 bestPolicyIndex = i;
             }
         }
-        
+
         return POLICY_TYPES[bestPolicyIndex];
     }
 
@@ -158,10 +145,10 @@ public class PolicyEngine {
         if (policyIndex == -1) {
             return 0.0;
         }
-        
+
         double baseImpact = policyEffects[policyIndex];
         double wealthFactor = 1.0;
-        
+
         switch (policyType) {
             case "税收改革":
                 wealthFactor = human.wealth / 100000.0;
@@ -181,7 +168,7 @@ public class PolicyEngine {
                 wealthFactor = (human.occupation == null) ? 1.0 : 0.0;
                 break;
         }
-        
+
         return baseImpact * wealthFactor;
     }
 

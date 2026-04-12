@@ -5,7 +5,6 @@ import com.motily.human.HumanService;
 import com.motily.society.SocialEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -45,11 +44,11 @@ public class DemographyEngine {
     };
 
     public void processWeeklyDemography(int currentYear, int currentWeek, Random rng) {
-        List<Human> allHumans = Human.findAll().list();
+        List<Human> aliveHumans = Human.find("deathYear is null").list();
 
-        processDeaths(allHumans, currentYear, rng);
-        checkPregnancy(allHumans, currentYear, rng);
-        advancePregnanciesAndDeliver(allHumans, currentYear, currentWeek, rng);
+        processDeaths(aliveHumans, currentYear, rng);
+        checkPregnancy(aliveHumans, currentYear, rng);
+        advancePregnanciesAndDeliver(aliveHumans, currentYear, currentWeek, rng);
     }
 
     protected void processDeaths(List<Human> humans, int currentYear, Random rng) {
