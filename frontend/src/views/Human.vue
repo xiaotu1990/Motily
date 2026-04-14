@@ -318,6 +318,59 @@
                 <span class="value">{{ parseJson(currentHuman.belief) }}</span>
               </div>
             </div>
+
+            <div v-if="activeDetailTab === 'timeline'" class="detail-content">
+              <div v-if="loadingTimeline" class="loading">加载时间线...</div>
+              <div v-else-if="humanExperiences.length === 0 && humanMemories.length === 0" class="empty-state" style="text-align: center; padding: 30px; color: #999;">
+                暂无经历和记忆数据
+              </div>
+              <div v-else class="timeline-container">
+                <div class="timeline-section">
+                  <h4 class="timeline-section-title">人生经历</h4>
+                  <div v-if="humanExperiences.length === 0" class="timeline-empty">暂无经历</div>
+                  <div v-else class="timeline-list">
+                    <div
+                      v-for="exp in humanExperiences"
+                      :key="'exp-' + exp.id"
+                      class="timeline-item"
+                    >
+                      <div class="timeline-dot" :class="'impact-' + exp.impactLevel"></div>
+                      <div class="timeline-content">
+                        <div class="timeline-header">
+                          <span class="timeline-year">{{ exp.eventYear }}年</span>
+                          <span class="timeline-type">{{ getEventTypeLabel(exp.eventType) }}</span>
+                          <span class="timeline-impact" :class="'impact-text-' + exp.impactLevel">
+                            {{ getImpactLabel(exp.impactLevel) }}
+                          </span>
+                        </div>
+                        <div class="timeline-desc">{{ exp.description }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="timeline-section">
+                  <h4 class="timeline-section-title">记忆</h4>
+                  <div v-if="humanMemories.length === 0" class="timeline-empty">暂无记忆</div>
+                  <div v-else class="timeline-list">
+                    <div
+                      v-for="mem in humanMemories"
+                      :key="'mem-' + mem.id"
+                      class="timeline-item memory-item"
+                    >
+                      <div class="timeline-dot memory-dot" :style="{ opacity: Math.max(0.3, mem.memoryStrength) }"></div>
+                      <div class="timeline-content">
+                        <div class="timeline-header">
+                          <span class="timeline-year">{{ mem.eventYear }}年</span>
+                          <span class="timeline-type">{{ getEventTypeLabel(mem.eventType) }}</span>
+                          <span class="memory-strength">强度: {{ (mem.memoryStrength * 100).toFixed(0) }}%</span>
+                        </div>
+                        <div class="timeline-desc">{{ mem.description }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div v-else class="error">加载失败</div>
         </div>
@@ -485,12 +538,23 @@ export default {
       detailTabs: [
         { label: '基本信息', value: 'basic' },
         { label: 'DNA 信息', value: 'dna' },
-        { label: '个性信息', value: 'personality' }
+        { label: '个性信息', value: 'personality' },
+        { label: '经历时间线', value: 'timeline' }
       ],
-      activeDetailTab: 'basic'
+      activeDetailTab: 'basic',
+      humanExperiences: [],
+      humanMemories: [],
+      loadingTimeline: false,
+      selectedIds: [],
+      showBatchDeleteConfirm: false,
     }
   },
   watch: {
+    activeDetailTab(newVal) {
+      if (newVal === 'timeline' && this.currentHuman) {
+        this.loadHumanTimeline(this.currentHuman.id)
+      }
+    },
     dnaComponents: {
       handler() {
         this.generateDnaCode()
@@ -657,6 +721,49 @@ export default {
     closeDetail() {
       this.showDetail = false
       this.currentHuman = null
+      this.humanExperiences = []
+      this.humanMemories = []
+      this.activeDetailTab = 'basic'
+    },
+    async loadHumanTimeline(humanId) {
+      this.loadingTimeline = true
+      try {
+        const [expRes, memRes] = await Promise.all([
+          axios.get(`/api/human/${humanId}/experiences`),
+          axios.get(`/api/human/${humanId}/memories`)
+        ])
+        this.humanExperiences = expRes.data?.data || []
+        this.humanMemories = memRes.data?.data || []
+      } catch (err) {
+        console.error('加载时间线失败:', err)
+        this.humanExperiences = []
+        this.humanMemories = []
+      } finally {
+        this.loadingTimeline = false
+      }
+    },
+    getEventTypeLabel(eventType) {
+      const labels = {
+        birth: '出生',
+        death: '死亡',
+        education: '教育',
+        career: '职业',
+        marriage: '婚姻',
+        health: '健康',
+        social: '社交',
+        wealth: '财富',
+        migration: '迁移',
+        class_change: '阶层变动',
+        出生: '出生',
+        死亡: '死亡',
+        结婚: '结婚',
+        阶层流动: '阶层流动'
+      }
+      return labels[eventType] || eventType
+    },
+    getImpactLabel(impactLevel) {
+      const labels = { 1: '低影响', 2: '中影响', 3: '高影响' }
+      return labels[impactLevel] || '未知'
     },
     getSocialClass(classId) {
       const classes = {
@@ -823,13 +930,11 @@ export default {
       this.loading = true
       this.error = null
       try {
-        // 这里需要实现删除数字人的API
-        // 暂时使用模拟删除，因为后端还没有实现删除接口
-        this.humans = this.humans.filter(human => human.id !== this.deleteId)
-        alert('删除成功')
+        await axios.delete(`/api/human/delete?id=${this.deleteId}`)
         this.closeDeleteConfirm()
+        this.loadHumans()
       } catch (err) {
-        this.error = '删除失败，请重试'
+        this.error = '删除失败：' + (err.message || '未知错误')
         console.error('删除数字人失败:', err)
       } finally {
         this.loading = false
@@ -1439,6 +1544,133 @@ export default {
 
 .dna-code-display span {
   flex: 1;
+  word-break: break-all;
+}
+
+.timeline-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.timeline-section {
+  margin-bottom: 20px;
+}
+
+.timeline-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.timeline-empty {
+  text-align: center;
+  color: #999;
+  padding: 15px;
+  font-size: 13px;
+}
+
+.timeline-list {
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dee2e6;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #adb5bd;
+}
+
+.timeline-item.memory-item {
+  border-left-color: #6f42c1;
+  background: #f8f4ff;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #007bff;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-dot.impact-1 { background: #28a745; }
+.timeline-dot.impact-2 { background: #ffc107; }
+.timeline-dot.impact-3 { background: #dc3545; }
+
+.timeline-dot.memory-dot {
+  background: #6f42c1;
+  box-shadow: 0 0 0 2px #d5c8e9;
+}
+
+.timeline-content {
+  min-width: 0;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.timeline-year {
+  font-weight: 600;
+  font-size: 13px;
+  color: #495057;
+}
+
+.timeline-type {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #e7f1ff;
+  color: #0066cc;
+}
+
+.timeline-impact {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.impact-text-1 { background: #d4edda; color: #155724; }
+.impact-text-2 { background: #fff3cd; color: #856404; }
+.impact-text-3 { background: #f8d7da; color: #721c24; }
+
+.memory-strength {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #e8daef;
+  color: #6f42c1;
+}
+
+.timeline-desc {
+  font-size: 13px;
+  color: #495057;
+  line-height: 1.5;
   word-break: break-all;
 }
 </style>

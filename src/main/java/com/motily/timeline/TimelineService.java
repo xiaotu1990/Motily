@@ -115,31 +115,34 @@ public class TimelineService {
             currentYear++;
         }
 
-        System.out.println("开始处理引擎逻辑，当前时间: " + currentYear + "年" + currentWeek + "周");
+        final int year = currentYear;
+        final int week = currentWeek;
 
-        runEngine("人口引擎", () -> demographyEngine.processWeeklyDemography(currentYear, currentWeek, rng));
-        runEngine("婚姻引擎", () -> marriageEngine.processWeeklyMarriages(currentYear, currentWeek));
-        runEngine("健康引擎", () -> healthEngine.processWeeklyHealth(currentYear, currentWeek, rng));
-        runEngine("教育引擎", () -> educationEngine.processWeeklyEducation(currentYear, currentWeek, rng));
-        runEngine("社交网络引擎", () -> socialNetworkEngine.processWeeklyNetwork(currentYear, currentWeek, rng));
-        runEngine("流动引擎", () -> mobilityEngine.processWeeklyMobility(currentYear));
-        runEngine("工业引擎", () -> industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng));
-        runEngine("投资引擎", () -> investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng));
-        runEngine("经济引擎", () -> economicEngine.processWeeklyEconomy(currentYear, currentWeek));
+        System.out.println("开始处理引擎逻辑，当前时间: " + year + "年" + week + "周");
+
+        runEngine("人口引擎", () -> demographyEngine.processWeeklyDemography(year, week, rng));
+        runEngine("婚姻引擎", () -> marriageEngine.processWeeklyMarriages(year, week));
+        runEngine("健康引擎", () -> healthEngine.processWeeklyHealth(year, week, rng));
+        runEngine("教育引擎", () -> educationEngine.processWeeklyEducation(year, week, rng));
+        runEngine("社交网络引擎", () -> socialNetworkEngine.processWeeklyNetwork(year, week, rng));
+        runEngine("流动引擎", () -> mobilityEngine.processWeeklyMobility(year));
+        runEngine("工业引擎", () -> industryEngine.processWeeklyIndustry(year, week, rng));
+        runEngine("投资引擎", () -> investmentEngine.processWeeklyInvestment(year, week, rng));
+        runEngine("经济引擎", () -> economicEngine.processWeeklyEconomy(year, week, rng));
         runEngine("区域服务", () -> regionService.updateRegionalFactors(rng));
-        runEngine("信仰引擎", () -> beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng));
-        runEngine("政策引擎", () -> policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng));
+        runEngine("信仰引擎", () -> beliefEngine.processWeeklyBeliefs(year, week, rng));
+        runEngine("政策引擎", () -> policyEngine.processWeeklyPolicy(year, week, rng));
 
-        if (currentWeek == 1) {
-            runEngine("社会演化", () -> societyService.evolveSociety(currentYear, "normal"));
+        if (week == 1) {
+            runEngine("社会演化", () -> societyService.evolveSociety(year, "normal"));
         }
 
-        if (currentWeek % 13 == 0) {
-            runEngine("季度事件", () -> societyService.generateQuarterlyEvents(currentYear, currentWeek, rng));
+        if (week % 13 == 0) {
+            runEngine("季度事件", () -> societyService.generateQuarterlyEvents(year, week, rng));
         }
 
-        managedTimeline.currentYear = currentYear;
-        managedTimeline.currentWeek = currentWeek;
+        managedTimeline.currentYear = year;
+        managedTimeline.currentWeek = week;
         managedTimeline.stepCount++;
         managedTimeline.updatedAt = LocalDateTime.now();
 
@@ -222,7 +225,7 @@ public class TimelineService {
         mobilityEngine.processWeeklyMobility(currentYear);
         industryEngine.processWeeklyIndustry(currentYear, currentWeek, rng);
         investmentEngine.processWeeklyInvestment(currentYear, currentWeek, rng);
-        economicEngine.processWeeklyEconomy(currentYear, currentWeek);
+        economicEngine.processWeeklyEconomy(currentYear, currentWeek, rng);
         regionService.updateRegionalFactors(rng);
         beliefEngine.processWeeklyBeliefs(currentYear, currentWeek, rng);
         policyEngine.processWeeklyPolicy(currentYear, currentWeek, rng);

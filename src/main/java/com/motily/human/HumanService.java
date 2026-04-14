@@ -81,4 +81,25 @@ public class HumanService {
     public List<Human> getHumansByYear(int year) {
         return Human.find("birthYear <= ?1 and (deathYear is null or deathYear >= ?1)", year).list();
     }
+
+    @Transactional
+    public boolean deleteHuman(Long id) {
+        Human human = Human.findById(id);
+        if (human == null) return false;
+        human.delete();
+        return true;
+    }
+
+    @Transactional
+    public int deleteHumans(List<Long> ids) {
+        int deleted = 0;
+        for (Long id : ids) {
+            Human human = Human.findById(id);
+            if (human != null) {
+                human.delete();
+                deleted++;
+            }
+        }
+        return deleted;
+    }
 }

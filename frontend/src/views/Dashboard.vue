@@ -476,17 +476,18 @@ export default {
         this.updateSimulationTime(simulationTimeData)
 
         // 处理事件数据
-        const eventsData = eventsRes.data?.data || []
-        this.recentEvents = eventsData.map(event => {
+        const activitiesData = eventsRes.data?.data || []
+        this.recentEvents = activitiesData.map(item => {
           let type = 'social'
-          if (event.eventType.includes('出生')) type = 'birth'
-          else if (event.eventType.includes('死亡')) type = 'death'
-          else if (event.eventType.includes('结婚')) type = 'marriage'
-          else if (event.eventType.includes('经济')) type = 'economic'
+          if (item.type === 'personal') type = 'personal'
+          else if (item.eventType && item.eventType.includes('出生')) type = 'birth'
+          else if (item.eventType && item.eventType.includes('死亡')) type = 'death'
+          else if (item.eventType && item.eventType.includes('结婚')) type = 'marriage'
+          else if (item.eventType && item.eventType.includes('经济')) type = 'economic'
           return {
             type,
-            title: event.description,
-            time: event.createdAt
+            title: item.title,
+            time: item.time
           }
         }).slice(0, 12) // 只取最近的12个事件
 
@@ -1645,6 +1646,7 @@ export default {
 .dot-marriage { background: #ff69b4; }
 .dot-economic { background: #ffc107; }
 .dot-social { background: #17a2b8; }
+.dot-personal { background: #9c27b0; }
 
 .event-info { flex: 1; min-width: 0; }
 

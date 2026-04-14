@@ -191,17 +191,42 @@ public class ApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getHumanDetail(@QueryParam("id") Long id) {
         Human human = humanService.getHumanById(id);
-        
+
         if (human == null) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("{\"code\": 404, \"message\": \"Human not found\"}")
                     .build();
         }
-        
+
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("id", human.id);
+        data.put("dnsCode", human.dnsCode);
+        data.put("name", human.name);
+        data.put("gender", human.gender);
+        data.put("birthYear", human.birthYear);
+        data.put("deathYear", human.deathYear);
+        data.put("wealth", human.wealth);
+        data.put("socialClass", human.socialClass);
+        data.put("occupation", human.occupation);
+        data.put("personality", human.personality);
+        data.put("talent", human.talent);
+        data.put("belief", human.belief);
+        data.put("regionId", human.regionId);
+        data.put("educationLevel", human.educationLevel);
+        data.put("healthStatus", human.healthStatus);
+        data.put("healthValue", human.healthValue);
+        data.put("industry", human.industry);
+        data.put("networkSize", human.networkSize);
+        data.put("maritalStatus", human.maritalStatus);
+        data.put("spouseId", human.spouseId);
+        data.put("pregnancyWeeks", human.pregnancyWeeks);
+        data.put("createdAt", human.createdAt != null ? human.createdAt.toString() : null);
+        data.put("updatedAt", human.updatedAt != null ? human.updatedAt.toString() : null);
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
-        response.put("data", human);
-        
+        response.put("data", data);
+
         return Response.ok(response).build();
     }
     
@@ -214,6 +239,42 @@ public class ApiResource {
         return Response.ok().entity("{\"code\": 200, \"data\": {\"success\": true}}")
                 .build();
     }
+
+    @DELETE
+    @Path("/human/delete")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteHuman(@QueryParam("id") Long id) {
+        boolean deleted = humanService.deleteHuman(id);
+        if (!deleted) {
+            java.util.Map<String, Object> errResponse = new java.util.HashMap<>();
+            errResponse.put("code", 404);
+            errResponse.put("data", java.util.Map.of("message", "数字人不存在"));
+            return Response.ok(errResponse).build();
+        }
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", java.util.Map.of("success", true));
+        return Response.ok(response).build();
+    }
+
+    @DELETE
+    @Path("/human/batch-delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response batchDeleteHumans(java.util.Map<String, java.util.List<Long>> request) {
+        java.util.List<Long> ids = request.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            java.util.Map<String, Object> errResponse = new java.util.HashMap<>();
+            errResponse.put("code", 400);
+            errResponse.put("data", java.util.Map.of("message", "请选择要删除的数字人"));
+            return Response.ok(errResponse).build();
+        }
+        int deleted = humanService.deleteHumans(ids);
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", java.util.Map.of("deleted", deleted));
+        return Response.ok(response).build();
+    }
     
     // 获取数字人经历
     @GET
@@ -222,12 +283,27 @@ public class ApiResource {
     public Response getHumanExperiences(@PathParam("id") Long id) {
         Human human = Human.findById(id);
         if (human == null) {
-            return Response.ok().entity("{\"code\": 404, \"data\": {\"message\": \"数字人不存在\"}}")
-                    .build();
+            java.util.Map<String, Object> errResponse = new java.util.HashMap<>();
+            errResponse.put("code", 404);
+            errResponse.put("data", java.util.Map.of("message", "数字人不存在"));
+            return Response.ok(errResponse).build();
         }
         List<HumanExperience> experiences = HumanExperience.find("human.id = ?1 ORDER BY eventYear", id).list();
-        return Response.ok().entity("{\"code\": 200, \"data\": " + experiences + "}")
-                .build();
+        java.util.List<java.util.Map<String, Object>> expList = new java.util.ArrayList<>();
+        for (HumanExperience exp : experiences) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", exp.id);
+            item.put("eventType", exp.eventType);
+            item.put("eventYear", exp.eventYear);
+            item.put("description", exp.description);
+            item.put("impactLevel", exp.impactLevel);
+            item.put("createdAt", exp.createdAt != null ? exp.createdAt.toString() : null);
+            expList.add(item);
+        }
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", expList);
+        return Response.ok(response).build();
     }
     
     // 获取数字人记忆
@@ -237,12 +313,30 @@ public class ApiResource {
     public Response getHumanMemories(@PathParam("id") Long id) {
         Human human = Human.findById(id);
         if (human == null) {
-            return Response.ok().entity("{\"code\": 404, \"data\": {\"message\": \"数字人不存在\"}}")
-                    .build();
+            java.util.Map<String, Object> errResponse = new java.util.HashMap<>();
+            errResponse.put("code", 404);
+            errResponse.put("data", java.util.Map.of("message", "数字人不存在"));
+            return Response.ok(errResponse).build();
         }
         List<HumanMemory> memories = HumanMemory.find("human.id = ?1 ORDER BY lastAccessedAt DESC", id).list();
-        return Response.ok().entity("{\"code\": 200, \"data\": " + memories + "}")
-                .build();
+        java.util.List<java.util.Map<String, Object>> memList = new java.util.ArrayList<>();
+        for (HumanMemory mem : memories) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", mem.id);
+            item.put("eventType", mem.eventType);
+            item.put("eventYear", mem.eventYear);
+            item.put("description", mem.description);
+            item.put("impactLevel", mem.impactLevel);
+            item.put("memoryStrength", mem.memoryStrength);
+            item.put("relatedExperienceId", mem.relatedExperienceId);
+            item.put("createdAt", mem.createdAt != null ? mem.createdAt.toString() : null);
+            item.put("lastAccessedAt", mem.lastAccessedAt != null ? mem.lastAccessedAt.toString() : null);
+            memList.add(item);
+        }
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", memList);
+        return Response.ok(response).build();
     }
     
     // 获取数字人生活轨迹
@@ -334,17 +428,99 @@ public class ApiResource {
     @Path("/simulation/events")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSimulationEvents(@QueryParam("simulationId") Long simulationId) {
-        List<SocialEvent> events = societyService.listSocialEventsByTimeline(simulationId);
-        
-        java.util.List<EventDTO> eventDTOs = new java.util.ArrayList<>();
+        java.util.List<java.util.Map<String, Object>> activities = new java.util.ArrayList<>();
+
+        List<SocialEvent> events = SocialEvent.find("ORDER BY createdAt DESC").range(0, 49).list();
         for (SocialEvent event : events) {
-            eventDTOs.add(new EventDTO(event));
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", event.id);
+            item.put("type", "social");
+            item.put("eventType", event.eventType);
+            item.put("title", event.description);
+            item.put("time", event.createdAt != null ? event.createdAt.toString() : "");
+            item.put("year", event.eventYear);
+            item.put("influenceScore", event.influenceScore);
+            activities.add(item);
         }
-        
+
+        List<HumanExperience> experiences = HumanExperience.find("ORDER BY createdAt DESC").range(0, 49).list();
+        for (HumanExperience exp : experiences) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", exp.id);
+            item.put("type", "personal");
+            item.put("eventType", exp.eventType);
+            item.put("title", exp.description);
+            item.put("time", exp.createdAt != null ? exp.createdAt.toString() : "");
+            item.put("year", exp.eventYear);
+            item.put("impactLevel", exp.impactLevel);
+            activities.add(item);
+        }
+
+        activities.sort((a, b) -> {
+            String timeA = (String) a.get("time");
+            String timeB = (String) b.get("time");
+            if (timeA == null && timeB == null) return 0;
+            if (timeA == null) return 1;
+            if (timeB == null) return -1;
+            return timeB.compareTo(timeA);
+        });
+
+        java.util.List<java.util.Map<String, Object>> limitedActivities = activities.subList(0, Math.min(20, activities.size()));
+
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("code", 200);
-        response.put("data", eventDTOs);
-        
+        response.put("data", limitedActivities);
+
+        return Response.ok(response).build();
+    }
+
+    @GET
+    @Path("/activities")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getRecentActivities(@QueryParam("limit") @DefaultValue("20") int limit) {
+        java.util.List<java.util.Map<String, Object>> activities = new java.util.ArrayList<>();
+
+        List<SocialEvent> events = SocialEvent.find("ORDER BY createdAt DESC").range(0, Math.min(limit - 1, 49)).list();
+        for (SocialEvent event : events) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", event.id);
+            item.put("type", "social");
+            item.put("eventType", event.eventType);
+            item.put("title", event.description);
+            item.put("time", event.createdAt != null ? event.createdAt.toString() : "");
+            item.put("year", event.eventYear);
+            item.put("influenceScore", event.influenceScore);
+            activities.add(item);
+        }
+
+        List<HumanExperience> experiences = HumanExperience.find("ORDER BY createdAt DESC").range(0, Math.min(limit - 1, 49)).list();
+        for (HumanExperience exp : experiences) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", exp.id);
+            item.put("type", "personal");
+            item.put("eventType", exp.eventType);
+            item.put("title", exp.description);
+            item.put("time", exp.createdAt != null ? exp.createdAt.toString() : "");
+            item.put("year", exp.eventYear);
+            item.put("impactLevel", exp.impactLevel);
+            activities.add(item);
+        }
+
+        activities.sort((a, b) -> {
+            String timeA = (String) a.get("time");
+            String timeB = (String) b.get("time");
+            if (timeA == null && timeB == null) return 0;
+            if (timeA == null) return 1;
+            if (timeB == null) return -1;
+            return timeB.compareTo(timeA);
+        });
+
+        java.util.List<java.util.Map<String, Object>> limitedActivities = activities.subList(0, Math.min(limit, activities.size()));
+
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("code", 200);
+        response.put("data", limitedActivities);
+
         return Response.ok(response).build();
     }
     
@@ -747,8 +923,8 @@ public class ApiResource {
 
     @Transactional
     public int createBatchInTransaction(int count) {
-        Timeline activeTimeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
-        int currentYear = activeTimeline != null ? activeTimeline.currentYear : java.time.LocalDate.now().getYear();
+        Timeline latestTimeline = Timeline.find("ORDER BY id DESC").firstResult();
+        int currentYear = latestTimeline != null ? latestTimeline.currentYear : java.time.LocalDate.now().getYear();
         Random rng = new Random();
         int chunkSize = 2000;
         int totalCreated = 0;
@@ -876,8 +1052,8 @@ public class ApiResource {
             return Response.ok(response).build();
         }
 
-        Timeline activeTimeline = Timeline.find("status = 1 ORDER BY id DESC").firstResult();
-        int currentYear = activeTimeline != null ? activeTimeline.currentYear : java.time.LocalDate.now().getYear();
+        Timeline latestTimeline = Timeline.find("ORDER BY id DESC").firstResult();
+        int currentYear = latestTimeline != null ? latestTimeline.currentYear : java.time.LocalDate.now().getYear();
         long birthCount = 0;
         long deathCount = 0;
         long marriageCount = 0;
