@@ -153,9 +153,15 @@
       加载中... <span class="loading"></span>
     </div>
     <div v-if="error" class="message message-error">{{ error }}</div>
+    <div v-if="selectedIds.length > 0" class="batch-action-bar">
+      <span class="batch-info">已选择 {{ selectedIds.length }} 项</span>
+      <button class="btn btn-danger btn-sm" @click="confirmBatchDelete">批量删除</button>
+      <button class="btn btn-sm btn-secondary" @click="selectedIds = []">取消选择</button>
+    </div>
     <table class="table" v-if="filteredHumans.length > 0">
       <thead>
         <tr>
+          <th class="checkbox-col"><input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" /></th>
           <th class="sortable">ID</th>
           <th class="sortable">姓名</th>
           <th class="sortable">性别</th>
@@ -167,7 +173,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="human in filteredHumans" :key="human.id">
+        <tr v-for="human in filteredHumans" :key="human.id" :class="{ 'row-selected': selectedIds.includes(human.id) }">
+          <td class="checkbox-col"><input type="checkbox" :value="human.id" v-model="selectedIds" /></td>
           <td>{{ human.id }}</td>
           <td>{{ human.name }}</td>
           <td>{{ human.gender === 0 ? '女' : '男' }}</td>
@@ -451,6 +458,25 @@
         </div>
       </div>
     </div>
+
+    <!-- 批量删除确认对话框 -->
+    <div v-if="showBatchDeleteConfirm" class="modal-overlay" @click="showBatchDeleteConfirm = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>确认批量删除</h3>
+          <button class="btn-close" @click="showBatchDeleteConfirm = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>确定要删除选中的 <strong>{{ selectedIds.length }}</strong> 个数字人吗？此操作不可撤销。</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showBatchDeleteConfirm = false">取消</button>
+          <button class="btn btn-danger" @click="batchDeleteHumans" :disabled="loading">
+            {{ loading ? '删除中...' : '确认删除' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -609,6 +635,9 @@ export default {
         pages.push(i)
       }
       return pages
+    },
+    isAllSelected() {
+      return this.filteredHumans.length > 0 && this.filteredHumans.every(h => this.selectedIds.includes(h.id))
     }
   },
   mounted() {
@@ -764,6 +793,33 @@ export default {
     getImpactLabel(impactLevel) {
       const labels = { 1: '低影响', 2: '中影响', 3: '高影响' }
       return labels[impactLevel] || '未知'
+    },
+    toggleSelectAll(event) {
+      if (event.target.checked) {
+        this.selectedIds = this.filteredHumans.map(h => h.id)
+      } else {
+        this.selectedIds = []
+      }
+    },
+    confirmBatchDelete() {
+      this.showBatchDeleteConfirm = true
+    },
+    async batchDeleteHumans() {
+      this.loading = true
+      this.error = null
+      try {
+        await axios.delete('/api/human/batch-delete', {
+          data: { ids: this.selectedIds }
+        })
+        this.showBatchDeleteConfirm = false
+        this.selectedIds = []
+        this.loadHumans()
+      } catch (err) {
+        this.error = '批量删除失败：' + (err.message || '未知错误')
+        console.error('批量删除数字人失败:', err)
+      } finally {
+        this.loading = false
+      }
     },
     getSocialClass(classId) {
       const classes = {
@@ -1672,5 +1728,37 @@ export default {
   color: #495057;
   line-height: 1.5;
   word-break: break-all;
+}
+
+.batch-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #e7f1ff;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.batch-info {
+  font-size: 13px;
+  color: #0066cc;
+  font-weight: 500;
+}
+
+.checkbox-col {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox-col input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #007bff;
+}
+
+.row-selected {
+  background-color: #f0f7ff !important;
 }
 </style>
